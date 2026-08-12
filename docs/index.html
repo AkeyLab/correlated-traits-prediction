@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R²gain Calculator</title>
+<meta name="description" content="An interactive calculator for the gain in predictive accuracy from adding a helper trait to a baseline polygenic score.">
+
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/katex.min.css"
+      integrity="sha384-u1zONI5gPXUx0UKI62c75/zww972y0v2rSK5ZYlVdS6xEuWDeZWUI66v6t1gvlXJ"
+      crossorigin="anonymous">
+<script defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/katex.min.js"
+        integrity="sha384-ykMNcWQhhTUb0YV9SPpPUFURHZ+tWmubkakGBP+OgNK/UXdO2gtzglWx0Rj9hnO3"
+        crossorigin="anonymous"></script>
+<script defer
+        src="https://cdn.jsdelivr.net/npm/katex@0.18.4/dist/contrib/auto-render.min.js"
+        integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz"
+        crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONE COLOUR PER QUANTITY.
+
+   Each of the five inputs has its own hue, and the result has a sixth. Chosen by
+   running the data-viz validator over every candidate assignment rather than by eye:
+   this set (blue / orange / green / yellow / aqua, plus purple for the result) is the
+   measured best available.
+
+   Honest limit: six distinguishable hues is past what any palette supports when EVERY
+   pair must be separable. This set's worst pair measures normal-vision deltaE 10.6
+   against a floor of 15, and colour-blind deltaE 2.7 against a target of 8. Colour is
+   therefore REINFORCEMENT here, never the identity channel — every swatch on this page
+   sits immediately beside its rendered symbol, which is what actually names it. Do not
+   reuse these hues anywhere a label is absent.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: light;
+  --surface-1: #fcfcfb;  --surface-2: #f4f4f1;  --page: #f9f9f7;
+  --text-primary: #0b0b0b;  --text-secondary: #52514e;  --text-muted: #898781;
+  --grid: #e1e0d9;  --axis: #c3c2b7;  --border: rgba(11,11,11,0.10);
+
+  --c-rg:   #2a78d6;   /* genetic correlation      */
+  --c-re:   #eb6834;   /* environmental correlation */
+  --c-ht2:  #008300;   /* target heritability      */
+  --c-hh2:  #eda100;   /* helper heritability      */
+  --c-rb2:  #1baf7a;   /* baseline R²              */
+  --c-gain: #88419d;   /* the result               */
+  --c-gain-wash: rgba(136,65,157,0.10);
+
+  --highlight: #fdf3c4;  --highlight-edge: #e8d67a;  --crit: #d03b3b;
+  /* the shaded out-of-domain band, and the outline its legend swatch needs to be
+     visible at 14px — chart and legend read from these same two values */
+  --invalid-wash: rgba(208,59,59,0.12);
+  --invalid-edge: rgba(208,59,59,0.50);
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-1: #1a1a19;  --surface-2: #232322;  --page: #0d0d0d;
+    --text-primary: #ffffff;  --text-secondary: #c3c2b7;  --text-muted: #898781;
+    --grid: #2c2c2a;  --axis: #383835;  --border: rgba(255,255,255,0.10);
+    --c-rg: #3987e5;  --c-re: #d95926;  --c-ht2: #008300;
+    --c-hh2: #c98500; --c-rb2: #199e70; --c-gain: #a2569f;
+    --c-gain-wash: rgba(162,86,159,0.16);
+    --highlight: #3a3417;  --highlight-edge: #6b5f24;
+    --invalid-wash: rgba(230,103,103,0.18);
+    --invalid-edge: rgba(230,103,103,0.55);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-1: #1a1a19;  --surface-2: #232322;  --page: #0d0d0d;
+  --text-primary: #ffffff;  --text-secondary: #c3c2b7;  --text-muted: #898781;
+  --grid: #2c2c2a;  --axis: #383835;  --border: rgba(255,255,255,0.10);
+  --c-rg: #3987e5;  --c-re: #d95926;  --c-ht2: #008300;
+  --c-hh2: #c98500; --c-rb2: #199e70; --c-gain: #a2569f;
+  --c-gain-wash: rgba(162,86,159,0.16);
+  --highlight: #3a3417;  --highlight-edge: #6b5f24;
+  --invalid-wash: rgba(230,103,103,0.18);
+  --invalid-edge: rgba(230,103,103,0.55);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--text-primary);
+       font-family: var(--sans); font-size: 16px; line-height: 1.62; }
+main { max-width: 1160px; margin: 0 auto; padding: 0 20px 80px; }
+
+h1 { font-size: clamp(1.6rem, 1.15rem + 2.1vw, 2.5rem); line-height: 1.16; letter-spacing: -0.022em;
+     margin: 0 auto; font-weight: 680; max-width: 20ch; text-wrap: balance; }
+h2 { font-size: clamp(1.08rem, 1rem + 0.45vw, 1.28rem); letter-spacing: -0.01em; margin: 0; font-weight: 620; }
+h3 { font-size: 0.9rem; margin: 0 0 9px; font-weight: 600; }
+p  { margin: 0 0 13px; }
+
+.lede { color: var(--text-secondary); }
+.muted { color: var(--text-muted); }
+.small { font-size: 0.84rem; line-height: 1.5; }
+
+.masthead { padding: 46px 0 26px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+/* the title block is centred; the body paragraphs below stay left-aligned so they
+   remain comfortable to read */
+.masthead-top { text-align: center; margin-bottom: 26px; }
+.eyebrow { font-size: 0.7rem; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase;
+           color: var(--c-gain); margin: 0 0 13px; }
+/* blue to orange: the genetic and environmental channels the whole page is about */
+.title-rule { width: 84px; height: 3px; margin: 20px auto 0; border-radius: 2px;
+              background: linear-gradient(90deg, var(--c-rg), var(--c-re)); }
+.byline { font-size: 0.86rem; color: var(--text-secondary); margin: 18px 0 0; text-align: center; }
+.eq-block { overflow-x: auto; padding: 4px 0 0; }
+.formula-note { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin: 2px 0 0; }
+
+section { margin: 0 0 40px; scroll-margin-top: 14px; }
+.section-head { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; margin-bottom: 5px; }
+.section-num { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.section-sub { color: var(--text-secondary); margin: 0 0 16px; font-size: 0.93rem; }
+
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+
+/* ── the section layout: controls left, figures right ────────────────────── */
+.sec-grid { display: grid; grid-template-columns: minmax(0, 292px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 940px) { .sec-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Each section carries its own copy of the five sliders, and it sticks while you
+   scroll that section, so a figure is always in view while you drag. */
+.panel { position: sticky; top: 14px; background: var(--surface-1); border: 1px solid var(--border);
+         border-radius: 10px; padding: 15px; }
+@media (max-width: 940px) { .panel { position: static; } }
+
+.panel-out { text-align: center; padding: 9px 10px; border-radius: 8px; margin-bottom: 13px;
+             background: var(--highlight); box-shadow: inset 0 0 0 1px var(--highlight-edge); }
+.panel-out .l { font-size: 0.68rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.panel-out .v { font-size: 1.55rem; font-weight: 640; line-height: 1.15; letter-spacing: -0.02em; margin-top: 1px; }
+.panel-out .s { font-size: 0.75rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+.row { display: grid; grid-template-columns: 62px minmax(0,1fr) 52px; align-items: center; gap: 7px; margin-bottom: 9px; }
+.row .sym { display: flex; align-items: center; gap: 5px; font-size: 0.84rem; }
+.dot { width: 9px; height: 9px; border-radius: 2.5px; flex: none; }
+.derived-val { font-variant-numeric: tabular-nums; font-size: 0.82rem; font-weight: 600;
+                text-align: center; color: var(--text-primary); }
+.row-def { grid-column: 1 / -1; font-size: 0.745rem; color: var(--text-muted); line-height: 1.4; margin: -4px 0 9px; }
+
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 20px; background: transparent; cursor: pointer; margin: 0; }
+input[type=range]::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--grid); }
+input[type=range]::-moz-range-track { height: 3px; border-radius: 2px; background: var(--grid); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5.5px;
+  border-radius: 50%; background: var(--knob); border: 2px solid var(--surface-1); box-shadow: 0 0 0 1px var(--border); }
+input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%;
+  background: var(--knob); border: 2px solid var(--surface-1); box-shadow: 0 0 0 1px var(--border); }
+input[type=range]:focus-visible { outline: 2px solid var(--knob); outline-offset: 3px; border-radius: 4px; }
+input[type=number] { width: 100%; padding: 3px 4px; font: inherit; font-size: 0.78rem; font-variant-numeric: tabular-nums;
+  text-align: right; border: 1px solid var(--axis); border-radius: 5px; background: var(--surface-1); color: var(--text-primary); }
+input[type=number]:focus-visible { outline: 2px solid var(--c-rg); outline-offset: 1px; }
+
+button { font: inherit; font-size: 0.76rem; font-weight: 550; cursor: pointer; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--axis); background: var(--surface-1); color: var(--text-primary); transition: background-color .13s, border-color .13s; }
+button:hover { background: var(--surface-2); border-color: var(--text-muted); }
+button:focus-visible { outline: 2px solid var(--c-rg); outline-offset: 2px; }
+button.primary { background: var(--c-gain); border-color: var(--c-gain); color: #fff; font-size: 0.8rem; padding: 6px 13px; }
+button.primary:hover { filter: brightness(1.08); background: var(--c-gain); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.msg { margin: 11px 0 0; padding: 9px 11px; border-radius: 7px; font-size: 0.78rem; line-height: 1.45; border: 1px solid; }
+.msg[hidden] { display: none; }
+.msg.warn { background: rgba(250,178,25,0.10); border-color: rgba(250,178,25,0.55); }
+.msg.error { background: rgba(208,59,59,0.09); border-color: rgba(208,59,59,0.5); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 5px 16px; font-size: 0.78rem; color: var(--text-secondary); margin: 0 0 11px; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-key { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+/* the out-of-domain band is a shaded AREA, so its key is a filled block, not a line */
+.legend-area { width: 15px; height: 11px; border-radius: 2px; flex: none;
+               background: var(--invalid-wash); border: 1px solid var(--invalid-edge); }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+.fig-cap { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; margin: 8px 0 0; }
+.fig-cap b { color: var(--text-secondary); font-weight: 600; }
+.calc { font-size: 0.82rem; line-height: 1.95; margin-top: 10px; padding: 9px 12px;
+         background: var(--surface-2); border-radius: 8px; font-variant-numeric: tabular-nums; }
+.calc .r { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.calc .tot { border-top: 1px solid var(--border); margin-top: 5px; padding-top: 5px; }
+.calc b { font-weight: 650; }
+.readout { font-size: 0.82rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; margin: 10px 0 0; }
+.readout b { color: var(--text-primary); font-weight: 600; }
+
+.split { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; }
+.spark-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px; }
+@media (max-width: 700px) { .split { grid-template-columns: minmax(0,1fr); } }
+
+.spark { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 10px 4px; }
+.spark-title { font-size: 0.77rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.spark-now { font-size: 0.72rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; margin: 1px 0 4px; min-height: 1.15em; }
+.spark svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 13px 14px; }
+.tile-label { font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); }
+.tile-value { font-size: 1.5rem; font-weight: 640; line-height: 1.15; letter-spacing: -0.015em; }
+.tile-note { font-size: 0.74rem; color: var(--text-muted); line-height: 1.4; margin-top: 3px; }
+.tile-calc { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; margin-top: 5px;
+             font-variant-numeric: tabular-nums; padding-top: 5px; border-top: 1px dashed var(--grid); }
+.meter { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; margin: 8px 0 2px; }
+.meter-fill { height: 100%; border-radius: 3px; background: var(--c-gain); }
+/* the two headline equations: the absolute gain large, the relative gain a step smaller */
+.eq-hero { text-align: center; margin: 20px 0 2px; }
+.eq-hero .katex-display { font-size: 1.5em; margin: 0.2em 0; }
+.eq-sub { text-align: center; margin: 16px 0 2px; }
+.eq-sub .katex-display { font-size: 1.15em; margin: 0.2em 0; }
+.eq-nums { font-size: 0.95rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.eq-nums b { color: var(--text-primary); font-weight: 650; }
+.eq-nums .muted { font-size: 0.85rem; }
+.mult-row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 13px; font-size: 0.84rem; color: var(--text-secondary); }
+.mult-row code { font-family: var(--sans); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-primary); }
+
+.hm-colour-note { font-size: 0.86rem; margin: 0 0 10px; padding: 8px 11px; border-radius: 7px;
+  background: var(--c-gain-wash); border-left: 3px solid var(--c-gain); }
+.hm-canvas { display: block; width: 100%; height: auto; cursor: crosshair; border-radius: 5px; }
+.cbar { display: flex; align-items: center; gap: 8px; font-size: 0.74rem; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.cbar canvas { height: 10px; width: 150px; border-radius: 3px; border: 1px solid var(--border); display: block; }
+.chk { display: inline-grid; grid-template-columns: auto auto; gap: 0 5px; align-items: center;
+        font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; max-width: 260px; }
+.chk-hint { grid-column: 2; font-size: 0.71rem; color: var(--text-muted); line-height: 1.3; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary); }
+
+.tooltip { position: fixed; z-index: 40; pointer-events: none; opacity: 0; transition: opacity .1s;
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--axis); border-radius: 7px;
+  padding: 6px 9px; font-size: 0.76rem; line-height: 1.45; box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+  font-variant-numeric: tabular-nums; max-width: 250px; }
+.tooltip[data-show="1"] { opacity: 1; }
+
+details.tableview { margin-top: 11px; }
+details.tableview > summary { cursor: pointer; font-size: 0.77rem; color: var(--text-muted); padding: 4px 0; }
+.tbl-scroll { overflow-x: auto; margin-top: 7px; }
+table.data { border-collapse: collapse; font-size: 0.77rem; width: 100%; font-variant-numeric: tabular-nums; }
+table.data th, table.data td { padding: 4px 9px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.data th:first-child, table.data td:first-child { text-align: left; }
+table.data thead th { color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--axis); }
+
+.katex { font-size: 1em !important; line-height: 1.2; }
+
+/* ── how to use ─────────────────────────────────────────────────────────── */
+.howto { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; font-size: 0.88rem; }
+.howto li { padding-left: 20px; position: relative; color: var(--text-secondary); }
+.howto li::before { content: "→"; position: absolute; left: 0; color: var(--c-gain); font-weight: 700; }
+.howto b { color: var(--text-primary); }
+
+/* ── contents · Morandi tones, UI chrome only, never a data colour ──────── */
+.toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 10px; margin: 0; }
+.toc-card { display: block; text-decoration: none; color: var(--text-primary); border: 1px solid var(--border);
+  border-left: 4px solid var(--tone); border-radius: 9px; padding: 11px 13px; background: var(--tone-wash);
+  transition: transform .13s ease, box-shadow .13s ease; }
+.toc-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
+.toc-card:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+.toc-num { display: block; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.toc-title { display: block; font-weight: 620; font-size: 0.87rem; line-height: 1.3; margin: 2px 0 4px; letter-spacing: -0.005em; }
+.toc-desc { display: block; font-size: 0.755rem; color: var(--text-secondary); line-height: 1.42; }
+[data-tone="1"] { --tone: #8f9a8b; --tone-wash: rgba(143,154,139,0.11); }
+[data-tone="2"] { --tone: #b08d86; --tone-wash: rgba(176,141,134,0.11); }
+[data-tone="3"] { --tone: #8c9bab; --tone-wash: rgba(140,155,171,0.11); }
+[data-tone="4"] { --tone: #b0a58c; --tone-wash: rgba(176,165,140,0.11); }
+[data-tone="5"] { --tone: #9a8fa3; --tone-wash: rgba(154,143,163,0.11); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [data-tone="1"] { --tone: #a3ae9e; --tone-wash: rgba(163,174,158,0.13); }
+  :root:not([data-theme="light"]) [data-tone="2"] { --tone: #c4a29a; --tone-wash: rgba(196,162,154,0.13); }
+  :root:not([data-theme="light"]) [data-tone="3"] { --tone: #a0aebd; --tone-wash: rgba(160,174,189,0.13); }
+  :root:not([data-theme="light"]) [data-tone="4"] { --tone: #c4b89e; --tone-wash: rgba(196,184,158,0.13); }
+  :root:not([data-theme="light"]) [data-tone="5"] { --tone: #aea2b7; --tone-wash: rgba(174,162,183,0.13); }
+}
+:root[data-theme="dark"] [data-tone="1"] { --tone: #a3ae9e; --tone-wash: rgba(163,174,158,0.13); }
+:root[data-theme="dark"] [data-tone="2"] { --tone: #c4a29a; --tone-wash: rgba(196,162,154,0.13); }
+:root[data-theme="dark"] [data-tone="3"] { --tone: #a0aebd; --tone-wash: rgba(160,174,189,0.13); }
+:root[data-theme="dark"] [data-tone="4"] { --tone: #c4b89e; --tone-wash: rgba(196,184,158,0.13); }
+:root[data-theme="dark"] [data-tone="5"] { --tone: #aea2b7; --tone-wash: rgba(174,162,183,0.13); }
+
+/* ── insight callouts ──────────────────────────────────────────────────── */
+.insight { margin-top: 16px; padding: 12px 14px; border-left: 3px solid var(--tone, var(--c-gain));
+  background: var(--tone-wash, var(--c-gain-wash)); border-radius: 0 8px 8px 0;
+  font-size: 0.87rem; line-height: 1.58; }
+.insight .k { display: block; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.insight p { margin: 0; }
+
+.footer { border-top: 1px solid var(--border); padding-top: 18px; margin-top: 40px; font-size: 0.82rem; color: var(--text-secondary); }
+.theme-toggle { position: fixed; top: 12px; right: 12px; z-index: 30; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="theme-toggle" type="button"
+        title="Switch between light and dark appearance"
+        aria-label="Switch between light and dark appearance">◐ Light / dark</button>
+
+<main>
+
+  <header class="masthead">
+    <!-- Title and the two opening paragraphs are the original page's text, unchanged. -->
+    <div class="masthead-top">
+      <p class="eyebrow">Part 1 · A single helper trait</p>
+      <h1>Calculating the Gain in Predictive Accuracy From Adding a Helper Trait to a Baseline Model</h1>
+      <div class="title-rule"></div>
+    </div>
+
+    <p class="lede">
+      This formula predicts the gain in predictive accuracy when adding a helper trait to a
+      baseline predictive model, which is typically a polygenic score (PGS). This equation says
+      that if we know a few characteristics that can be measured in empirical data, we can
+      predict how much this will help us predict a target trait of interest.
+    </p>
+    <p class="lede">This formula was derived in Zhang et al.</p>
+
+    <div class="eq-block">
+      $$
+      R^2_{\mathrm{gain}} = \frac{
+        \left[\, \rho_g \sqrt{\frac{h_h^2}{h_t^2}} \left(h_t^2 - R^2_{\mathrm{base}}\right)
+          + \rho_e \sqrt{\left(1 - h_h^2\right)\left(1 - h_t^2\right)} \,\right]^2
+      }{
+        R^2_{\mathrm{base}} \left[\, 1 - \rho_g^2 \, R^2_{\mathrm{base}} \, \frac{h_h^2}{h_t^2} \,\right]
+      }
+      $$
+    </div>
+    <p class="formula-note">Equation (13), in the closed form derived in Additional file 1,
+      Supplementary Methods 2.</p>
+
+    <p class="byline">
+      Zhang K, Bierman R, and Akey JM. A Principled Framework for Using
+      Correlated Traits to Improve Risk Prediction. In Review.
+    </p>
+  </header>
+
+  <section id="s-howto" style="margin-bottom:28px">
+    <div class="section-head"><span class="section-num">▸</span><h2>How to use this page</h2></div>
+    <div class="card">
+      <ul class="howto">
+        <li><b>Every section has the same five sliders.</b> Move any one of them and every figure on
+            the page redraws.</li>
+        <li>The <b>Jump to a figure</b> buttons in section 01 load a representative point from each figure in the paper.</li>
+        <li><b>▶ Sweep \(h_t^2\)</b> in section 04 animates the target heritability from 0.9 down to
+            0.1 and back, so you can watch which helper traits become the best ones.</li>
+        <li><b>Hover</b> any curve or map for exact values; <b>click</b> a heat map to move the
+            sliders to that point.</li>
+        <li><b>◐ at the top right</b> switches the page between light and dark appearance.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="s-contents" style="margin-bottom:34px">
+    <div class="section-head"><span class="section-num">▸</span><h2>Contents</h2></div>
+    <nav class="toc" aria-label="Contents">
+      <a class="toc-card" data-tone="1" href="#s1"><span class="toc-num">01</span>
+        <span class="toc-title">Where the correlation comes from</span>
+        <span class="toc-desc">Equation (7) as a picture: each trait's variance split into genetic
+          and environmental parts, and the two contributions that make up \(\rho_p\).</span></a>
+      <a class="toc-card" data-tone="2" href="#s2"><span class="toc-num">02</span>
+        <span class="toc-title">Response to each parameter</span>
+        <span class="toc-desc">Five plots of \(R^2_{\mathrm{gain}}\) against each input in turn,
+          with the other four held fixed.</span></a>
+      <a class="toc-card" data-tone="3" href="#s3"><span class="toc-num">03</span>
+        <span class="toc-title">What drives the gain</span>
+        <span class="toc-desc">The three terms \(\Delta R^2\) factors into, each with its own
+          number, then assembled back into \(R^2_{\mathrm{gain}}\).</span></a>
+      <a class="toc-card" data-tone="4" href="#s4"><span class="toc-num">04</span>
+        <span class="toc-title">The whole landscape</span>
+        <span class="toc-desc">Figures 3 and 4 recomputed live as two heat maps, with a sweep that
+          carries you from one to the other.</span></a>
+      <a class="toc-card" data-tone="5" href="#s5"><span class="toc-num">05</span>
+        <span class="toc-title">Same correlation, different values</span>
+        <span class="toc-desc">Two helper traits with identical \(\rho_p\) but different sources,
+          and how far apart their gains end up.</span></a>
+    </nav>
+  </section>
+
+  <!-- ══════════ 01 ══════════ -->
+  <section id="s1" data-tone="1">
+    <div class="section-head"><span class="section-num">01</span><h2>Where the correlation comes from</h2></div>
+    <p class="section-sub">
+      Two traits correlate through shared genes, shared environments, or both. How the correlation
+      divides between those two sources decides whether a helper trait is worth measuring.
+    </p>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="eq-block">
+        $$\rho_p \;=\; \underbrace{\rho_g\sqrt{h_t^2 h_h^2}}_{\text{genetic term}}
+                  \;+\; \underbrace{\rho_e\sqrt{(1-h_t^2)(1-h_h^2)}}_{\text{environmental term}}$$
+      </div>
+      <p class="formula-note">Equation (7). The weights are functions of the two heritabilities:
+        \(\rho_g\) is weighted by \(\sqrt{h_t^2h_h^2}\) and \(\rho_e\) by the two
+        non-heritable fractions, \(\sqrt{(1-h_t^2)(1-h_h^2)}\).</p>
+    </div>
+
+    <div class="sec-grid">
+      <div class="panel" id="panel-1"></div>
+      <div class="card">
+        <div class="legend" aria-hidden="true">
+          <span class="legend-item"><span class="legend-key" style="background:var(--c-rg)"></span> Genetic</span>
+          <span class="legend-item"><span class="legend-key" style="background:var(--c-re)"></span> Environmental</span>
+        </div>
+        <svg id="anatomy-svg" viewBox="0 0 760 300" role="img" aria-labelledby="anatomy-title"
+             style="width:100%;height:auto;display:block"><title id="anatomy-title">Each trait's variance split into genetic and environmental parts, with the two correlations linking them</title><desc id="anatomy-desc"></desc></svg>
+        <p class="fig-cap">
+          Each bar is one trait's variance, and the width of the blue block <b>is</b> that trait's
+          heritability. The curved links are the two correlations: a thicker link means a stronger
+          correlation, and <b>a dashed link means a negative one</b>.
+        </p>
+
+        <svg id="rhop-svg" viewBox="0 0 760 142" role="img" aria-labelledby="rhop-title"
+             style="width:100%;height:auto;display:block;margin-top:14px"><title id="rhop-title">The phenotypic correlation as a sum of a genetic and an environmental contribution</title><desc id="rhop-desc"></desc></svg>
+        <p class="fig-cap">
+          \(\rho_g\) is weighted by the two heritabilities and \(\rho_e\) by the two
+          non-heritable fractions. Terms with opposite signs point in opposite directions, so they
+          partly cancel.
+        </p>
+        <div class="calc" id="rhop-calc"></div>
+        <p class="readout" id="derived-line"></p>
+      </div>
+    </div>
+
+    <div class="insight"><span class="k">Insight · from the paper</span><p>Because the two weights depend on the heritabilities, traits with the <em>same</em> phenotypic correlation can be built from completely different mixes of shared genes and shared environment — and \(\rho_p\) alone cannot tell them apart. Read backwards, this equation also gives a route to \(\rho_e\), the environmental correlation, which is otherwise hard to observe directly.</p></div>
+  </section>
+
+  <!-- ══════════ 02 ══════════ -->
+  <section id="s2" data-tone="2">
+    <div class="section-head"><span class="section-num">02</span><h2>Response to each parameter</h2></div>
+    <p class="section-sub">
+      Each panel varies one input and holds the other four where you left them, so every panel
+      redraws whenever you move a slider.
+    </p>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="eq-block">
+        $$
+        R^2_{\mathrm{gain}} = \frac{
+          \left[\, \rho_g \sqrt{\frac{h_h^2}{h_t^2}} \left(h_t^2 - R^2_{\mathrm{base}}\right)
+            + \rho_e \sqrt{\left(1 - h_h^2\right)\left(1 - h_t^2\right)} \,\right]^2
+        }{
+          R^2_{\mathrm{base}} \left[\, 1 - \rho_g^2 \, R^2_{\mathrm{base}} \, \frac{h_h^2}{h_t^2} \,\right]
+        }
+        $$
+      </div>
+      <p class="formula-note">Equation (13), in closed form. Each panel below is a slice through it.</p>
+    </div>
+
+    <div class="sec-grid">
+      <div class="panel" id="panel-2"></div>
+      <div class="card">
+        <div class="legend">
+          <span class="legend-item"><span class="legend-key" style="background:var(--c-gain)"></span> \(R^2_{\mathrm{gain}}\)</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-gain)"></span> current value</span>
+          <span class="legend-item"><span class="legend-area"></span> outside the model</span>
+        </div>
+        <div class="spark-grid" id="sparks"></div>
+        <details class="tableview" id="det-spark"><summary>as a table</summary>
+          <div class="tbl-scroll"><table class="data" id="spark-table"></table></div></details>
+      </div>
+    </div>
+
+    <div class="insight"><span class="k">Insight · from the paper</span><p>Once the other correlation is nonzero, the response is <b>not symmetric about zero</b>. Same-sign genetic and environmental correlations reinforce one another, and opposite signs cancel. So when \(\rho_e\) is positive, \(\rho_g = +0.5\) beats \(\rho_g = -0.5\); when \(\rho_e\) is negative, that ordering reverses. With the other correlation at exactly zero the response is symmetric. Over the ranges explored in Figure 2 of the paper, helper traits improved accuracy by up to about 70%.</p></div>
+  </section>
+
+  <!-- ══════════ 03 ══════════ -->
+  <section id="s3" data-tone="3">
+    <div class="section-head"><span class="section-num">03</span><h2>What drives the gain</h2></div>
+    <p class="section-sub">
+      The Methods split the <em>absolute</em> gain into three terms, in the expression that
+      follows Equation (12). Dividing by the baseline turns it into the relative gain of
+      Equation (13). Any term near zero collapses the result.
+    </p>
+    <div class="sec-grid">
+      <div class="panel" id="panel-3"></div>
+      <div class="card">
+        <div class="tiles" id="factors"></div>
+
+        <div class="eq-hero">
+          $$\Delta R^2 \;=\; \left(1 - R^2_{\mathrm{base}}\right)\;\times\; r^2_{th}\;\times\;\left(1 - \mathcal{R}\right)$$
+          <div class="eq-nums" id="dr2-nums"></div>
+        </div>
+
+        <div class="eq-sub">
+          $$R^2_{\mathrm{gain}} \;=\; \frac{\Delta R^2}{R^2_{\mathrm{base}}}$$
+          <div class="eq-nums" id="gain-nums"></div>
+        </div>
+
+        <div class="mult-row" id="factor-product"></div>
+        <div class="calc" id="factor-calc"></div>
+        <p class="fig-cap" id="factor-what"></p>
+        <p class="fig-cap" id="factor-note"></p>
+      </div>
+    </div>
+
+    <div class="insight"><span class="k">Insight · from the paper</span><p>A helper trait can correlate strongly with the target and <b>still be worthless if the baseline already captures that correlation</b>. The paper's empirical selection tackles a related but different problem: redundancy <em>among</em> the candidate helper traits, filtered greedily on their pairwise correlations. Redundancy with the polygenic score itself, the \(\mathcal{R}\) of the theory, does not enter that selection.</p></div>
+  </section>
+
+  <!-- ══════════ 04 ══════════ -->
+  <section id="s4" data-tone="4">
+    <div class="section-head"><span class="section-num">04</span><h2>The whole landscape</h2>
+      <span class="pill" id="hm-regime"></span></div>
+    <p class="section-sub">
+      These are Figures 3 and 4 of the paper, recomputed live: at \(h_t^2 = 0.9\) the two panels
+      reproduce <b>Figure 3</b>, and at \(h_t^2 = 0.1\) they reproduce <b>Figure 4</b>.
+      <b>Click ▶ Sweep \(h_t^2\)</b> and the target heritability travels from \(h_t^2 = 0.9\)
+      down to \(h_t^2 = 0.1\) and back, carrying both panels from one figure to the other. While it
+      runs, the sweep also drives \(R^2_{\mathrm{base}}\), holding \(\alpha = 0.1\) as both
+      figures do; the value you set is restored when you stop.
+      The two panels respond very differently. <b>Panel A</b>, with the environmental correlation on
+      its vertical axis, transforms: as the target becomes less heritable there is more environmental
+      variance for \(\rho_e\) to work with, the largest gains grow by roughly ten to fifty times,
+      and the darkest cells move left, to low helper heritability. <b>Panel B</b>, with the genetic
+      correlation on its vertical axis, changes far less, because the genetic channel is capped by
+      how much heritable variance the target has to share.
+    </p>
+    <div class="sec-grid">
+      <div class="panel" id="panel-4"></div>
+      <div class="card">
+        <div class="btn-row" style="margin-bottom:13px">
+          <button type="button" class="primary" id="hm-play">▶ Sweep \(h_t^2\)</button>
+          <label class="chk"><input type="checkbox" id="hm-sqrt"><span>√ scale</span><span
+            class="chk-hint">Colour only: it makes small values easier to see, and leaves the values themselves unchanged.</span></label>
+          <div class="cbar" style="margin-left:auto"><b id="cbar-name"></b><span id="cbar-lo">0</span>
+            <canvas id="cbar" width="150" height="10" aria-hidden="true"></canvas>
+            <span id="cbar-hi">—</span></div>
+        </div>
+        <p class="hm-colour-note" id="hm-colour-note"></p>
+        <div class="split">
+          <div><h3 id="hm-a-title"></h3>
+            <canvas class="hm-canvas" id="hm-a" width="960" height="880" role="img"
+              aria-label="Gain as a function of helper trait heritability and environmental correlation"></canvas></div>
+          <div><h3 id="hm-b-title"></h3>
+            <canvas class="hm-canvas" id="hm-b" width="960" height="880" role="img"
+              aria-label="Gain as a function of helper trait heritability and genetic correlation"></canvas></div>
+        </div>
+        <div class="calc" id="hm-calc"></div>
+
+        <details class="tableview" id="det-hm"><summary>as a table</summary>
+          <div class="tbl-scroll"><table class="data" id="hm-table"></table></div></details>
+      </div>
+    </div>
+
+    <div class="insight"><span class="k">Insight · from the paper</span><p>For a <b>highly heritable</b> target, the best helper traits are heritable too. For a <b>weakly heritable</b> target the ranking flips: low-heritability helper traits often give the largest gains, because what they add is environmental signal a polygenic score cannot contain, and for such a target the gains persist even against an already-accurate baseline.</p></div>
+  </section>
+
+  <!-- ══════════ 05 ══════════ -->
+  <section id="s5" data-tone="5">
+    <div class="section-head"><span class="section-num">05</span><h2>Same correlation, different values</h2></div>
+    <p class="section-sub">
+      Every helper trait below has the same \(\rho_p\) with the target, and only the source of that
+      correlation differs. Set \(\rho_p\) on the left, then drag \(\rho_g\): \(\rho_e\) adjusts
+      to keep \(\rho_p\) fixed, so you move along one family of equally correlated helper traits.
+    </p>
+    <div class="sec-grid">
+      <div class="panel" id="panel-5"></div>
+      <div class="card">
+        <div class="tiles" style="margin-top:14px" id="mix-tiles"></div>
+        <div class="calc" id="mix-calc"></div>
+        <svg id="mix-svg" viewBox="0 0 720 240" role="img" aria-labelledby="mix-title"
+             style="width:100%;height:auto;display:block;margin-top:16px"><title id="mix-title">Gain across helper traits sharing the same phenotypic correlation</title></svg>
+        <p class="fig-cap" id="mix-note"></p>
+      </div>
+    </div>
+
+    <div class="insight"><span class="k">Insight · from the paper</span><p>Two helper traits with the same \(\rho_p\) can differ substantially in what they contribute. The genetic and environmental architecture underneath is what decides.</p></div>
+  </section>
+
+  <footer class="footer">
+    <p>Zhang K, Bierman R, and Akey JM. A Principled Framework for Using Correlated Traits to
+       Improve Risk Prediction. In Review.</p>
+    <p class="small muted">Every value on this page is computed in your browser from Equation (13).
+       Part 1 covers a single helper trait; extending the result to several at once is left as future
+       work, as the paper's Discussion notes.</p>
+  </footer>
+
+</main>
+
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* CORE:BEGIN — verify.mjs extracts this block from index.html and tests it directly, so the
+   verified code is the code that ships. Keep the markers in place, and keep this block free of
+   anything that touches the DOM.
+
+   NOTE FOR THE TEST HARNESS: the two correlation inputs are the correlations themselves,
+   rho_g and rho_e on [-1, 1], not their squares. The published equation is LINEAR in rho_g and
+   rho_e in the numerator and QUADRATIC in rho_g in the denominator, so no single squared input
+   can satisfy both. Keys: rg, re, hh2, ht2, rb2. */
+
+const VARS = [
+  { key: 'rg',  label: 'Genetic correlation',       min: -1, max: 1 },
+  { key: 're',  label: 'Environmental correlation', min: -1, max: 1 },
+  { key: 'hh2', label: 'Helper trait heritability', min:  0, max: 1 },
+  { key: 'ht2', label: 'Target trait heritability', min:  0, max: 1 },
+  { key: 'rb2', label: 'Baseline R²',               min:  0, max: 1 }
+];
+
+/**
+ * The equation with no validation and no allocation — the hot path that fills the heat-map
+ * grids and the response curves, called tens of thousands of times per animation frame.
+ * Returns NaN where the expression is undefined.
+ *
+ * Closed form of Equation (13), Additional file 1 Supplementary Methods 2:
+ *
+ *   R2gain = [ rho_g sqrt(h2h/h2t) (h2t - R2base) + rho_e sqrt((1-h2t)(1-h2h)) ]^2
+ *            ---------------------------------------------------------------------
+ *                     R2base [ 1 - rho_g^2 R2base (h2h/h2t) ]
+ */
+function gainFast(rg, re, hh2, ht2, rb2) {
+  if (!(ht2 > 0) || !(rb2 > 0)) return NaN;
+  const rhB = rg * Math.sqrt(rb2 * hh2 / ht2);
+  const denomInner = 1 - rhB * rhB;
+  if (!(denomInner > 0)) return NaN;
+  const rho_p = rg * Math.sqrt(ht2 * hh2) + re * Math.sqrt((1 - ht2) * (1 - hh2));
+  const n = rho_p - Math.sqrt(rb2) * rhB;
+  return (n * n / denomInner) / rb2;
+}
+
+/**
+ * Evaluates the equation, validates the domain, and classifies the result.
+ * Returns { value, status, message, parts }; status is 'ok' | 'warn' | 'error'.
+ */
+function computeGain(vals) {
+  const { rg, re, hh2, ht2, rb2 } = vals;
+  const fail = (message, code) => ({ value: null, status: 'error', message, code, parts: null });
+
+  for (const v of VARS) {
+    const x = vals[v.key];
+    if (!Number.isFinite(x)) return fail(`${v.label} is not a number.`, 'nan');
+    if (x < v.min || x > v.max) {
+      return fail(`${v.label} is ${x}, outside its allowed range of ${v.min} to ${v.max}.`, 'range');
+    }
+  }
+  if (ht2 <= 0) return fail('Target heritability must be above 0 — the equation divides by it.', 'ht2zero');
+  if (rb2 <= 0) return fail('Baseline R² must be above 0 — the gain is measured relative to it.', 'rb2zero');
+
+  const ratio = hh2 / ht2;
+
+  /* Correlations of the baseline predictor B with the target and with the helper trait, both
+     following from B's construction in Equation (17). */
+  const rtB = Math.sqrt(rb2);
+  const rhB = rg * Math.sqrt(rb2 * ratio);
+
+  /* Phenotypic correlation, Equation (7). At the population level r_th equals rho_p. */
+  const rho_p = rg * Math.sqrt(ht2 * hh2) + re * Math.sqrt((1 - ht2) * (1 - hh2));
+
+  /* 1 - r_hB^2. Note the SQUARE on rho_g here, which the numerator does not carry. */
+  const denomInner = 1 - rhB * rhB;
+  if (denomInner <= 0) {
+    return fail('Undefined here: the denominator has reached zero.', 'denom');
+  }
+
+  const numer = Math.pow(rho_p - rtB * rhB, 2);
+  const dR2 = numer / denomInner;
+  const value = dR2 / rb2;
+
+  /* The three factors of Equation (13). Their product is exactly `value`. */
+  const headroom = (1 - rb2) / rb2;
+  const rth2 = rho_p * rho_p;
+  const rthB2 = numer / ((1 - rb2) * denomInner);      /* squared partial correlation */
+  const nonRedundant = rth2 > 0 ? rthB2 / rth2 : null; /* the (1 - R) factor */
+  const redundancy = nonRedundant === null ? null : 1 - nonRedundant;
+
+  const parts = { rho_p, rtB, rhB, dR2, alpha: rb2 / ht2, headroom, rth2, rthB2, redundancy, nonRedundant };
+
+  if (rb2 > ht2) {
+    /* the reader-facing wording lives in msgHTML(); this is only a fallback identifier */
+    return { value, status: 'warn', parts, code: 'alpha', message: 'alpha > 1' };
+  }
+  return { value, status: 'ok', message: '', code: '', parts };
+}
+
+/* CORE:END */
+
+/* ═══════════════ maths rendering ═══════════════
+   Static markup is typeset by KaTeX's auto-render pass over document.body. Anything built
+   afterwards by this script renders its own KaTeX here and caches it. Hand-rolled
+   <sup>/<sub> is not a substitute: HTML sets scripts sequentially, so h^2_t comes out with
+   the t beside the 2 rather than beneath it. */
+const TEX = {
+  rg: '\\rho_g', re: '\\rho_e', rp: '\\rho_p', ht2: 'h^2_t', hh2: 'h^2_h',
+  rb2: 'R^2_{\\mathrm{base}}', gain: 'R^2_{\\mathrm{gain}}', rth2: 'r^2_{th}',
+  alpha: '\\alpha', R2: 'R^2', dR2: '\\Delta R^2',
+  wg: '\\sqrt{h^2_t h^2_h}', we: '\\sqrt{(1-h^2_t)(1-h^2_h)}',
+  rgsq: '\\rho_g^2', ratio: 'h^2_h/h^2_t',
+  rtB: 'r_{tB}', rhB: 'r_{hB}', rth: 'r_{th}', rthB: 'r_{th|B}', rthB2: 'r^2_{th|B}',
+  Rcal: '\\mathcal{R}',
+  headroom: '(1 - R^2_{\\mathrm{base}})\\,/\\,R^2_{\\mathrm{base}}',
+  oneMinusR: '1 - \\mathcal{R}'
+};
+const TEX_FALLBACK = {
+  rg: '&rho;<sub>g</sub>', re: '&rho;<sub>e</sub>', rp: '&rho;<sub>p</sub>',
+  ht2: 'h<sup>2</sup><sub>t</sub>', hh2: 'h<sup>2</sup><sub>h</sub>',
+  rb2: 'R<sup>2</sup><sub>base</sub>', gain: 'R<sup>2</sup><sub>gain</sub>',
+  rth2: 'r<sup>2</sup><sub>th</sub>', alpha: '&alpha;', R2: 'R<sup>2</sup>',
+  dR2: '&Delta;R<sup>2</sup>',
+  wg: '&radic;(h<sup>2</sup><sub>t</sub>h<sup>2</sup><sub>h</sub>)',
+  we: '&radic;((1&minus;h<sup>2</sup><sub>t</sub>)(1&minus;h<sup>2</sup><sub>h</sub>))',
+  rgsq: '&rho;<sub>g</sub><sup>2</sup>',
+  ratio: 'h<sup>2</sup><sub>h</sub>/h<sup>2</sup><sub>t</sub>',
+  rtB: 'r<sub>tB</sub>', rhB: 'r<sub>hB</sub>', rth: 'r<sub>th</sub>',
+  rthB: 'r<sub>th|B</sub>', rthB2: 'r<sup>2</sup><sub>th|B</sub>', Rcal: '&#8477;',
+  headroom: '(1 &minus; R<sup>2</sup><sub>base</sub>) / R<sup>2</sup><sub>base</sub>',
+  oneMinusR: '1 &minus; &#8477;'
+};
+const _mhCache = {};
+function mh(key) {
+  if (_mhCache[key] !== undefined) return _mhCache[key];
+  /* An unknown key used to fall through as `undefined` and render the literal word
+     "undefined" into the page. Fail loudly instead — a missing symbol is a bug, and a
+     silent one is worse than a visible one. */
+  if (TEX[key] === undefined) {
+    if (typeof console !== 'undefined') console.warn('mh(): no symbol defined for ' + key);
+    _mhCache[key] = '⟨' + key + '?⟩';
+    return _mhCache[key];
+  }
+  let out = null;
+  if (typeof katex !== 'undefined' && katex.renderToString) {
+    try { out = katex.renderToString(TEX[key], { throwOnError: false }); } catch (e) { out = null; }
+  }
+  _mhCache[key] = out || TEX_FALLBACK[key] || ('⟨' + key + '?⟩');
+  return _mhCache[key];
+}
+
+/* ── per-quantity presentation. `colour` is the CSS custom property holding that
+      quantity's hue; `def` is shown once, in section 01 only. ── */
+const VAR_META = {
+  rg:  { colour: '--c-rg',  step: 0.01, start: 0.30, def: 'Genetic correlation between the target and the helper trait' },
+  re:  { colour: '--c-re',  step: 0.01, start: 0.10, def: 'Environmental correlation between the target and the helper trait' },
+  hh2: { colour: '--c-hh2', step: 0.01, start: 0.50, def: 'Heritability of the helper trait' },
+  ht2: { colour: '--c-ht2', step: 0.01, start: 0.50, sliderMin: 0.01, def: 'Heritability of the target trait' },
+  rb2: { colour: '--c-rb2', step: 0.01, start: 0.10, sliderMin: 0.01, def: 'Accuracy of the baseline PGS: the squared correlation between observed and predicted target values' }
+};
+
+const PRESETS = [
+  { name: 'Fig 2',  s: { ht2: 0.40, hh2: 0.60, rb2: 0.20, rg: 0.50, re: 0.30 } },
+  { name: 'Fig 3A', s: { ht2: 0.90, hh2: 0.60, rb2: 0.09, rg: 0.90, re: 0.50 } },
+  { name: 'Fig 3B', s: { ht2: 0.90, hh2: 0.60, rb2: 0.09, rg: 0.50, re: 0.90 } },
+  { name: 'Fig 4A', s: { ht2: 0.10, hh2: 0.10, rb2: 0.01, rg: 0.90, re: 0.90 } },
+  { name: 'Fig 4B', s: { ht2: 0.10, hh2: 0.60, rb2: 0.01, rg: 0.90, re: 0.90 } },
+  { name: 'Fig S2', s: { ht2: 0.90, hh2: 0.60, rb2: 0.81, rg: 0.90, re: 0.90 } },
+  { name: 'Fig S3', s: { ht2: 0.10, hh2: 0.10, rb2: 0.09, rg: 0.90, re: 0.90 } }
+];
+
+/* ── formatting ── */
+const fmt = (v, p = 3) => !Number.isFinite(v) ? '—'
+  : (v !== 0 && (Math.abs(v) >= 1e6 || Math.abs(v) < 1e-4)) ? v.toExponential(2)
+  : String(parseFloat(v.toPrecision(p)));
+const formatValue = v => !Number.isFinite(v) ? '—'
+  : (v !== 0 && (Math.abs(v) >= 1e6 || Math.abs(v) < 1e-4)) ? v.toExponential(3)
+  : String(parseFloat(v.toPrecision(4)));
+function formatPercent(v) {
+  if (!Number.isFinite(v)) return '—';
+  const pct = v * 100, mag = Math.abs(pct);
+  return `${pct < 0 ? '−' : '+'}${mag.toFixed(mag >= 100 ? 0 : 1)}%`;
+}
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+
+/* ── the paper's BuPu ramp for the heat maps (ColorBrewer 9-class, monotone lightness) ── */
+const RAMP = [[247,252,253],[224,236,244],[191,211,230],[158,188,218],[140,150,198],
+              [140,107,177],[136,65,157],[129,15,124],[77,0,75]];
+function rampColor(t) {
+  t = clamp(t, 0, 1) * (RAMP.length - 1);
+  const i = Math.min(RAMP.length - 2, Math.floor(t)), f = t - i;
+  const a = RAMP[i], b = RAMP[i + 1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+}
+const rampCss = t => { const c = rampColor(t).map(Math.round); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+
+/* ── state ── */
+const state = {};
+for (const v of VARS) state[v.key] = VAR_META[v.key].start;
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = id => document.getElementById(id);
+const svgEl = (tag, attrs) => {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+};
+
+/* Design tokens read once per frame. getComputedStyle per drawing call forces a style
+   recalculation each time and alone is enough to stop the sweep holding 60fps. */
+const TOKEN_NAMES = ['--text-primary','--text-secondary','--text-muted','--grid','--axis','--surface-1',
+                     '--c-rg','--c-re','--c-ht2','--c-hh2','--c-rb2','--c-gain','--invalid-wash'];
+const TOKENS = {};
+function refreshTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const n of TOKEN_NAMES) TOKENS[n] = cs.getPropertyValue(n).trim();
+}
+refreshTokens();
+const cssVar = n => TOKENS[n];
+
+/* Clear an <svg> of drawn content but keep its accessible <title>/<desc>. A childNodes
+   count loop destroys those, because whitespace between tags counts as child nodes. */
+function clearSvg(svg) {
+  const keep = { title: 1, desc: 1 };
+  for (let i = svg.childNodes.length - 1; i >= 0; i--) {
+    const n = svg.childNodes[i];
+    if (n.nodeType === 3 || (n.nodeType === 1 && !keep[n.nodeName.toLowerCase()])) svg.removeChild(n);
+  }
+}
+
+/* Every other drawing routine says something when it cannot draw; these two used to go
+   blank, leaving a caption describing bars that were not there. */
+function svgPlaceholder(svg, w, h) {
+  const t = svgEl('text', { x: w / 2, y: h / 2, 'text-anchor': 'middle', 'font-size': 13,
+                            fill: cssVar('--text-muted') });
+  t.textContent = 'Undefined for these values.';
+  svg.appendChild(t);
+}
+
+/* ═══════════════ SVG maths ═══════════════ */
+function mathText(attrs, spec, base) {
+  const t = svgEl('text', Object.assign({ 'font-size': base }, attrs));
+  const SUP = -0.46, SUB = 0.30, SMALL = 0.72;
+  const adv = (str, size) => 0.55 * size * String(str).length;
+  let cur = 0, pending = 0;
+  const push = (str, target, size, dx) => {
+    const a = { dy: (target - cur).toFixed(2), 'font-size': size.toFixed(1) };
+    const total = (dx || 0) + pending; pending = 0;
+    if (Math.abs(total) > 0.01) a.dx = total.toFixed(2);
+    const ts = svgEl('tspan', a); ts.textContent = str; t.appendChild(ts); cur = target;
+  };
+  for (const tok of spec) {
+    if (typeof tok === 'string') { push(tok, 0, base, 0); continue; }
+    const small = SMALL * base;
+    if (tok.sup !== undefined && tok.sub !== undefined) {
+      /* stacked: the subscript is pulled back under the superscript, then whatever
+         follows is pushed forward by the wider of the two */
+      const wSup = adv(tok.sup, small), wSub = adv(tok.sub, small);
+      push(tok.sup, SUP * base, small, 0);
+      push(tok.sub, SUB * base, small, -wSup);
+      pending = Math.max(wSup, wSub) - wSub;
+    } else if (tok.sup !== undefined) { push(tok.sup, SUP * base, small, 0); }
+    else { push(tok.sub, SUB * base, small, 0); }
+  }
+  return t;
+}
+const SYM = {
+  Yt: ['Y', { sub: 't' }], Yh: ['Y', { sub: 'h' }],
+  ht2: ['h', { sup: '2', sub: 't' }], hh2: ['h', { sup: '2', sub: 'h' }],
+  rg: ['ρ', { sub: 'g' }], re: ['ρ', { sub: 'e' }], rp: ['ρ', { sub: 'p' }],
+  rb2: ['R', { sup: '2', sub: 'base' }], gain: ['R', { sup: '2', sub: 'gain' }]
+};
+const cat = (...parts) => parts.flat();
+
+/* ═══════════════ rho_p BOOKKEEPING ═══════════════
+   rho_p = rho_g*kg + rho_e*ke. Section 05 pins rho_p and lets rho_e absorb the change, so
+   dragging rho_g walks along the constant-rho_p family instead of leaving it. */
+function kgke() {
+  return { kg: Math.sqrt(state.ht2 * state.hh2),
+           ke: Math.sqrt((1 - state.ht2) * (1 - state.hh2)) };
+}
+const currentRhoP = () => { const { kg, ke } = kgke(); return state.rg * kg + state.re * ke; };
+
+/* Set rho_e so the pair lands on `target`, keeping rho_g. Returns the rho_p actually
+   reached, which differs from the target only when rho_e would have to leave [-1, 1]. */
+function solveRhoE(target) {
+  const { kg, ke } = kgke();
+  if (!(ke > 0)) return currentRhoP();
+  state.re = clamp((target - state.rg * kg) / ke, -1, 1);
+  return currentRhoP();
+}
+/* the rho_g values reachable at this rho_p without pushing rho_e out of range */
+function rgRange(target) {
+  const { kg, ke } = kgke();
+  if (!(kg > 0)) return { lo: -1, hi: 1 };
+  return { lo: Math.max(-1, (target - ke) / kg), hi: Math.min(1, (target + ke) / kg) };
+}
+
+/* ═══════════════ CONTROL PANELS ═══════════════
+   Every section carries its own copy of the five sliders. They all write to the single
+   `state` object and every panel re-reads it, so moving one moves them all. */
+const panels = [];   /* [{ inputs: {key: [{range,num}]}, out: {v, s}, msg }] */
+
+function buildPanel(hostId, opts) {
+  const host = $(hostId);
+  const p = { inputs: {}, out: null, msg: null };
+
+  /* Built element by element rather than via innerHTML + children[i]: positional
+     indexing into parsed markup silently breaks the moment the template changes. */
+  const out = document.createElement('div');
+  out.className = 'panel-out';
+  const lab = document.createElement('div'); lab.className = 'l'; lab.innerHTML = mh('gain');
+  const val = document.createElement('div'); val.className = 'v'; val.textContent = '—';
+  const sub = document.createElement('div'); sub.className = 's';
+  out.appendChild(lab); out.appendChild(val); out.appendChild(sub);
+  host.appendChild(out);
+  p.out = { v: val, s: sub };
+
+  if (opts.pinRhoP) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML =
+      `<span class="sym"><span class="dot" style="background:var(--text-primary)"></span>${mh('rp')}</span>
+       <input type="range" id="${hostId}-r-rp" min="-1" max="1" step="0.01"
+              value="${currentRhoP().toFixed(2)}" style="--knob:var(--text-primary)"
+              aria-label="Phenotypic correlation">
+       <input type="number" id="${hostId}-n-rp" step="0.01"
+              value="${currentRhoP().toFixed(2)}" aria-label="Phenotypic correlation">`;
+    host.appendChild(row);
+    const hint = document.createElement('div');
+    hint.className = 'row-def';
+    hint.textContent = 'Phenotypic correlation, held fixed in this section. Move it directly, or '
+                     + 'move the genetic correlation below and the environmental correlation will '
+                     + 'adjust to hold it fixed.';
+    host.appendChild(hint);
+    const r = $(`${hostId}-r-rp`), n = $(`${hostId}-n-rp`);
+    p.rhoP = { range: r, num: n };
+    const apply = v => { stopSweep(); stopTween(); solveRhoE(v); syncInputs(); render(); };
+    r.addEventListener('input', () => apply(parseFloat(r.value)));
+    n.addEventListener('input', () => { const v = parseFloat(n.value); if (Number.isFinite(v)) apply(v); });
+  }
+
+  for (const v of VARS) {
+    const m = VAR_META[v.key];
+
+    /* rho_e is not an input where rho_p is pinned — it is whatever the other two force */
+    if (opts.pinRhoP && v.key === 're') {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML =
+        `<span class="sym"><span class="dot" style="background:var(${m.colour})"></span>${mh('re')}</span>
+         <span class="derived-val" id="${hostId}-d-re"></span>
+         <span class="muted" style="font-size:0.7rem">derived</span>`;
+      host.appendChild(row);
+      p.derivedRe = $(`${hostId}-d-re`);
+      continue;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    const rid = `${hostId}-r-${v.key}`, nid = `${hostId}-n-${v.key}`;
+    row.innerHTML =
+      `<span class="sym"><span class="dot" style="background:var(${m.colour})"></span>${mh(v.key)}</span>
+       <input type="range" id="${rid}" min="${m.sliderMin === undefined ? v.min : m.sliderMin}"
+              max="${v.max}" step="${m.step}" value="${state[v.key]}"
+              style="--knob:var(${m.colour})" aria-label="${v.label}">
+       <input type="number" id="${nid}" step="${m.step}" value="${state[v.key]}"
+              min="${m.sliderMin === undefined ? v.min : m.sliderMin}" max="${v.max}"
+              aria-label="${v.label}">`;
+    host.appendChild(row);
+
+    if (opts.defs) {
+      const d = document.createElement('div');
+      d.className = 'row-def';
+      d.textContent = m.def;
+      host.appendChild(d);
+    }
+
+    const range = $(rid), num = $(nid);
+    (p.inputs[v.key] = p.inputs[v.key] || []).push({ range, num });
+
+    /* Both controls go through one path. Keeping them separate previously meant the
+       number box neither refreshed the other panels nor honoured section 05's pin. */
+    const applyVar = x => {
+      stopSweep(); stopTween();
+      if (!Number.isFinite(x)) { state[v.key] = x; syncInputs(); render(); return; }
+      const val = clamp(x, Number(range.min), Number(range.max));
+      if (opts.pinRhoP && v.key === 'rg') {
+        const target = currentRhoP();   /* hold rho_p and let rho_e absorb the move */
+        state.rg = val;
+        solveRhoE(target);
+      } else {
+        state[v.key] = val;
+      }
+      syncInputs(); render();
+    };
+    range.addEventListener('input', () => applyVar(parseFloat(range.value)));
+    num.addEventListener('input', () => applyVar(num.value === '' ? NaN : parseFloat(num.value)));
+  }
+
+  if (opts.presets) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:12px;padding-top:11px;border-top:1px solid var(--border)';
+    wrap.innerHTML = '<div class="small muted" style="margin-bottom:6px">Jump to a figure</div>';
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    for (const preset of PRESETS) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = preset.name;
+      b.addEventListener('click', () => { stopSweep(); tweenTo(preset.s); });
+      row.appendChild(b);
+    }
+    wrap.appendChild(row);
+    host.appendChild(wrap);
+  }
+
+  const msg = document.createElement('p');
+  msg.className = 'msg'; msg.hidden = true;
+  host.appendChild(msg);
+  p.msg = msg;
+
+  panels.push(p);
+}
+
+function syncInputs() {
+  for (const p of panels) {
+    if (p.rhoP) {
+      const rp = currentRhoP();
+      p.rhoP.range.value = String(clamp(rp, -1, 1));
+      if (document.activeElement !== p.rhoP.num) p.rhoP.num.value = String(parseFloat(rp.toFixed(3)));
+    }
+    if (p.derivedRe) p.derivedRe.textContent = fmt(state.re, 3);
+    for (const v of VARS) {
+      const x = state[v.key];
+      /* a panel may omit a control — rho_e is derived where rho_p is pinned */
+      if (!Number.isFinite(x) || !p.inputs[v.key]) continue;
+      for (const c of p.inputs[v.key]) {
+        c.range.value = String(clamp(x, Number(c.range.min), Number(c.range.max)));
+        if (document.activeElement !== c.num) c.num.value = String(parseFloat(x.toFixed(4)));
+      }
+    }
+  }
+}
+
+/* ═══════════════ tweening ═══════════════ */
+let tweenRAF = null, introTimer = null;
+const stopTween = () => {
+  if (tweenRAF) { cancelAnimationFrame(tweenRAF); tweenRAF = null; }
+  /* the opening animation is a pending timeout, which cancelAnimationFrame cannot reach;
+     without this, a preset clicked in the first fraction of a second is silently undone */
+  if (introTimer) { clearTimeout(introTimer); introTimer = null; }
+};
+function tweenTo(target, ms = 800) {
+  stopTween();
+  if (REDUCED) { Object.assign(state, target); syncInputs(); render(); return; }
+  const from = {};
+  for (const v of VARS) from[v.key] = Number.isFinite(state[v.key]) ? state[v.key] : VAR_META[v.key].start;
+  const t0 = performance.now();
+  const ease = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+  const step = now => {
+    const q = clamp((now - t0) / ms, 0, 1), e = ease(q);
+    for (const v of VARS) {
+      const to = target[v.key] === undefined ? from[v.key] : target[v.key];
+      state[v.key] = from[v.key] + (to - from[v.key]) * e;
+    }
+    syncInputs(); render();
+    tweenRAF = q < 1 ? requestAnimationFrame(step) : null;
+  };
+  tweenRAF = requestAnimationFrame(step);
+}
+
+/* ═══════════════ tooltip ═══════════════ */
+const tip = $('tooltip');
+function showTip(evt, html) {
+  tip.innerHTML = html; tip.dataset.show = '1';
+  const pad = 14, r = tip.getBoundingClientRect();
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + r.width > window.innerWidth - 8) x = evt.clientX - r.width - pad;
+  if (y + r.height > window.innerHeight - 8) y = evt.clientY - r.height - pad;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => { tip.dataset.show = '0'; };
+
+/* ═══════════════ 01 · anatomy ═══════════════ */
+function drawAnatomy() {
+  const svg = $('anatomy-svg');
+  clearSvg(svg);
+  const { ht2, hh2, rg, re } = state;
+  if (![ht2, hh2, rg, re].every(Number.isFinite)) { svgPlaceholder(svg, 760, 300); return; }
+
+  const x0 = 178, barW = 550, h = 38, GAP = 2, yT = 46, yH = 214;
+  const ink = cssVar('--text-primary'), sec = cssVar('--text-secondary'), muted = cssVar('--text-muted');
+  const cGen = cssVar('--c-rg'), cEnv = cssVar('--c-re'), surf = cssVar('--surface-1');
+  const put = e => { svg.appendChild(e); return e; };
+  const add = (t, a, txt) => { const e = svgEl(t, a); if (txt != null) e.textContent = txt; return put(e); };
+
+  function traitRow(y, nameSpec, h2, h2spec, h2colour) {
+    const gw = Math.max(0, barW * h2 - (h2 > 0 && h2 < 1 ? GAP/2 : 0));
+    const ew = Math.max(0, barW * (1 - h2) - (h2 > 0 && h2 < 1 ? GAP/2 : 0));
+    if (gw > 0.5) add('rect', { x: x0, y, width: gw, height: h, rx: 4, fill: cGen });
+    if (ew > 0.5) add('rect', { x: x0 + barW*h2 + GAP/2, y, width: ew, height: h, rx: 4, fill: cEnv });
+    if (gw > 92) add('text', { x: x0+10, y: y+h/2+5, 'font-size': 12.5, fill: '#fff', 'font-weight': 600 }, 'genetic');
+    if (ew > 126) add('text', { x: x0+barW-10, y: y+h/2+5, 'text-anchor': 'end', 'font-size': 12.5, fill: '#fff', 'font-weight': 600 }, 'environmental');
+
+    put(mathText({ x: x0-16, y: y+15, 'text-anchor': 'end', fill: ink, 'font-weight': 550 }, nameSpec, 14.5));
+    /* the heritability marker: a tick at the genetic/environmental boundary, in that
+       quantity's own colour, tying the slider to the thing it moves */
+    const bx = x0 + barW * h2;
+    add('line', { x1: bx, y1: y + h + 2, x2: bx, y2: y + h + 11, stroke: h2colour, 'stroke-width': 2.5, 'stroke-linecap': 'round' });
+    put(mathText({ x: x0-16, y: y+33, 'text-anchor': 'end', fill: muted },
+                 cat(h2spec, [' = ' + h2.toFixed(2)]), 12.5));
+    add('rect', { x: x0-13, y: y+25, width: 9, height: 9, rx: 2, fill: h2colour });
+  }
+  traitRow(yT, cat(['Target trait  '], SYM.Yt), ht2, SYM.ht2, cssVar('--c-ht2'));
+  traitRow(yH, cat(['Helper trait  '], SYM.Yh), hh2, SYM.hh2, cssVar('--c-hh2'));
+
+  /* the two correlation links — each joins the midpoints of the two blocks it relates,
+     which is the point: a correlation is a property of the PAIR, not of either trait */
+  const yA = yT + h, yB = yH;
+  const gMid = q => x0 + barW * q / 2, eMid = q => x0 + barW * (q + 1) / 2;
+
+  function link(xa, xb, rho, colour, labelSpec, labelY, faded) {
+    const bend = 52;
+    add('path', {
+      d: `M ${xa} ${yA} C ${xa} ${yA+bend}, ${xb} ${yB-bend}, ${xb} ${yB}`,
+      fill: 'none', stroke: colour, 'stroke-width': (1.2 + 9*Math.abs(rho)).toFixed(2),
+      'stroke-linecap': 'round', opacity: faded ? 0.22 : 0.8,
+      'stroke-dasharray': rho < -1e-9 ? '8 6' : 'none'
+    });
+    put(mathText({
+      x: clamp((xa+xb)/2, x0+60, x0+barW-60), y: labelY, 'text-anchor': 'middle',
+      fill: ink, 'font-weight': 650, stroke: surf, 'stroke-width': 4,
+      'stroke-linejoin': 'round', 'paint-order': 'stroke fill'
+    }, cat(labelSpec, [' = ' + (rho >= 0 ? '+' : '−') + Math.abs(rho).toFixed(2)]), 14.5));
+  }
+  link(gMid(ht2), gMid(hh2), rg, cGen, SYM.rg, yA + 44, ht2*hh2 < 1e-6);
+  link(eMid(ht2), eMid(hh2), re, cEnv, SYM.re, yB - 30, (1-ht2)*(1-hh2) < 1e-6);
+
+
+  const desc = svg.querySelector('desc');
+  if (desc) desc.textContent =
+    `Target ${(ht2*100).toFixed(0)} percent genetic, helper ${(hh2*100).toFixed(0)} percent genetic. ` +
+    `Genetic correlation ${rg.toFixed(2)}, environmental correlation ${re.toFixed(2)}.`;
+}
+
+function drawRhoP() {
+  const svg = $('rhop-svg');
+  clearSvg(svg);
+  const { ht2, hh2, rg, re } = state;
+  if (![ht2, hh2, rg, re].every(Number.isFinite)) { svgPlaceholder(svg, 760, 142); return; }
+
+  const x0 = 178, barW = 550, mid = x0 + barW/2, half = barW/2, yb = 44, bh = 24;
+  const ink = cssVar('--text-primary'), sec = cssVar('--text-secondary'), muted = cssVar('--text-muted');
+  const cGen = cssVar('--c-rg'), cEnv = cssVar('--c-re'), surf = cssVar('--surface-1');
+  const put = e => { svg.appendChild(e); return e; };
+  const add = (t, a, txt) => { const e = svgEl(t, a); if (txt != null) e.textContent = txt; return put(e); };
+
+  const gC = rg * Math.sqrt(ht2 * hh2);
+  const eC = re * Math.sqrt((1-ht2) * (1-hh2));
+  const rho = gC + eC;
+
+  put(mathText({ x: x0-16, y: yb+5, 'text-anchor': 'end', fill: ink, 'font-weight': 550 },
+               cat(['Phenotypic corr.  '], SYM.rp), 14.5));
+  add('line', { x1: mid, y1: yb-bh/2-12, x2: mid, y2: yb+28, stroke: cssVar('--grid'), 'stroke-width': 1 });
+  add('line', { x1: x0, y1: yb+28, x2: x0+barW, y2: yb+28, stroke: cssVar('--axis'), 'stroke-width': 1 });
+  [-1,-0.5,0,0.5,1].forEach(t => {
+    const x = mid + t*half;
+    add('line', { x1: x, y1: yb+28, x2: x, y2: yb+32, stroke: cssVar('--axis'), 'stroke-width': 1 });
+    add('text', { x, y: yb+46, 'text-anchor': 'middle', 'font-size': 11.5, fill: muted,
+                  'font-variant-numeric': 'tabular-nums' }, String(t));
+  });
+
+  const seg = (from, val, colour) => {
+    if (Math.abs(val) < 1e-9) return from;
+    const xa = mid + from*half, xb = mid + (from+val)*half;
+    add('rect', { x: Math.min(xa,xb), y: yb-bh/2, width: Math.abs(xb-xa), height: bh, rx: 3, fill: colour });
+    return from + val;
+  };
+  seg(seg(0, gC, cGen), eC, cEnv);
+
+  const xr = mid + clamp(rho, -1, 1) * half;
+  add('line', { x1: xr, y1: yb-bh/2-8, x2: xr, y2: yb+bh/2+8, stroke: surf, 'stroke-width': 5, 'stroke-linecap': 'round' });
+  add('line', { x1: xr, y1: yb-bh/2-8, x2: xr, y2: yb+bh/2+8, stroke: ink, 'stroke-width': 2, 'stroke-linecap': 'round' });
+  put(mathText({ x: clamp(xr, x0+40, x0+barW-40), y: yb-bh/2-15, 'text-anchor': 'middle',
+                 fill: ink, 'font-weight': 650 }, cat(SYM.rp, [' = ' + rho.toFixed(3)]), 14));
+
+  const key = (x, colour, words, val) => {
+    add('rect', { x, y: yb+62, width: 11, height: 11, rx: 3, fill: colour });
+    add('text', { x: x+17, y: yb+71.5, 'font-size': 12.5, fill: sec },
+        words + '  ' + (val >= 0 ? '+' : '−') + Math.abs(val).toFixed(3));
+  };
+  key(x0, cGen, 'genetic term', gC);
+  key(x0 + 268, cEnv, 'environmental term', eC);
+
+  const desc = svg.querySelector('desc');
+  if (desc) desc.textContent = `Phenotypic correlation ${rho.toFixed(3)}: genetic ${gC.toFixed(3)} plus environmental ${eC.toFixed(3)}.`;
+}
+
+/* ═══════════════ 02 · response curves ═══════════════ */
+const SPARKS = [
+  { key: 'rg',  label: 'Genetic correlation',       lo: -1,   hi: 1 },
+  { key: 're',  label: 'Environmental correlation', lo: -1,   hi: 1 },
+  { key: 'hh2', label: 'Helper trait heritability', lo: 0.01, hi: 0.99 },
+  { key: 'ht2', label: 'Target trait heritability', lo: 0.01, hi: 0.99 },
+  { key: 'rb2', label: 'Baseline R²',               lo: 0.01, hi: 0.99 }
+];
+const SPARK_N = 121;
+
+function sweepCurve(key, lo, hi) {
+  const pts = [];
+  const v = { rg: state.rg, re: state.re, hh2: state.hh2, ht2: state.ht2, rb2: state.rb2 };
+  for (let i = 0; i < SPARK_N; i++) {
+    const x = lo + (hi-lo)*i/(SPARK_N-1);
+    v[key] = x;
+    const y = gainFast(v.rg, v.re, v.hh2, v.ht2, v.rb2);
+    /* `valid` marks the region the paper's construction covers, alpha = R2base/h2t <= 1 */
+    pts.push({ x, y, valid: Number.isFinite(y) && v.rb2 <= v.ht2 + 1e-12 });
+  }
+  return pts;
+}
+
+function buildSparks() {
+  const host = $('sparks');
+  for (const s of SPARKS) {
+    const d = document.createElement('div');
+    d.className = 'spark';
+    d.innerHTML =
+      `<div class="spark-title"><span class="dot" style="background:var(${VAR_META[s.key].colour})"></span>${s.label} ${mh(s.key)}</div>
+       <div class="spark-now" id="now-${s.key}"></div>
+       <svg id="sp-${s.key}" viewBox="0 0 280 130" role="img" aria-label="Gain as ${s.label} varies"></svg>`;
+    host.appendChild(d);
+  }
+}
+
+function drawSpark(s, curValue) {
+  const svg = $('sp-' + s.key);
+  svg.textContent = '';
+  const pts = sweepCurve(s.key, s.lo, s.hi);
+  const good = pts.filter(p => p.valid);
+
+  const W = 280, H = 130, L = 44, R = 8, T = 9, BOT = 26;
+  const add = (t, a, txt) => { const e = svgEl(t, a); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; };
+  const muted = cssVar('--text-muted'), gain = cssVar('--c-gain');
+  const own = cssVar(VAR_META[s.key].colour);
+
+  if (!good.length) {
+    add('text', { x: W/2, y: H/2, 'text-anchor': 'middle', 'font-size': 11, fill: muted }, 'Undefined for these values.');
+    $('now-' + s.key).textContent = '';
+    return;
+  }
+
+  const ymax = Math.max.apply(null, good.map(p => p.y));
+  const ymin = Math.min.apply(null, [0].concat(good.map(p => p.y)));
+  const pad = (ymax - ymin) * 0.12 || 0.1;
+  const y1 = ymax + pad, y0 = ymin;
+  const sx = x => L + (x - s.lo)/(s.hi - s.lo)*(W-L-R);
+  const sy = y => T + (1 - (y-y0)/(y1-y0 || 1))*(H-T-BOT);
+
+  for (let i = 0; i <= 2; i++) {
+    const yv = y0 + (y1-y0)*i/2;
+    add('line', { x1: L, y1: sy(yv), x2: W-R, y2: sy(yv), stroke: cssVar('--grid'), 'stroke-width': 1 });
+    add('text', { x: L-5, y: sy(yv)+3.5, 'text-anchor': 'end', 'font-size': 9, fill: muted,
+                  'font-variant-numeric': 'tabular-nums' }, fmt(yv, 2));
+  }
+
+  let run = null;
+  const flush = () => {
+    if (!run) return;
+    add('rect', { x: sx(run[0]), y: T, width: Math.max(1, sx(run[1])-sx(run[0])), height: H-T-BOT,
+                  fill: cssVar('--invalid-wash') });
+    run = null;
+  };
+  pts.forEach((p, i) => {
+    if (!p.valid) { if (!run) run = [p.x, p.x]; else run[1] = p.x; } else flush();
+    if (i === pts.length-1) flush();
+  });
+
+  if (y0 < 0 && y1 > 0) add('line', { x1: L, y1: sy(0), x2: W-R, y2: sy(0), stroke: cssVar('--axis'), 'stroke-width': 1 });
+
+  let d = '', pen = false;
+  for (const p of pts) {
+    if (!p.valid) { pen = false; continue; }
+    d += (pen ? 'L' : 'M') + sx(p.x).toFixed(2) + ' ' + sy(clamp(p.y, y0, y1)).toFixed(2) + ' ';
+    pen = true;
+  }
+  add('path', { d, fill: 'none', stroke: gain, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+
+  add('line', { x1: L, y1: H-BOT, x2: W-R, y2: H-BOT, stroke: cssVar('--axis'), 'stroke-width': 1 });
+  [s.lo, (s.lo+s.hi)/2, s.hi].forEach(t => {
+    add('text', { x: clamp(sx(t), L+8, W-R-8), y: H-BOT+13, 'text-anchor': 'middle', 'font-size': 9,
+                  fill: muted, 'font-variant-numeric': 'tabular-nums' }, fmt(t, 2));
+  });
+  svg.appendChild(mathText({ x: (L+W-R)/2, y: H-3, 'text-anchor': 'middle', fill: cssVar('--text-secondary') },
+                           SYM[s.key], 11));
+
+  /* the guide line wears this parameter's colour; the curve stays the result colour */
+  const cur = state[s.key];
+  if (Number.isFinite(cur) && Number.isFinite(curValue)) {
+    const cx = sx(clamp(cur, s.lo, s.hi)), cy = sy(clamp(curValue, y0, y1));
+    add('line', { x1: cx, y1: T, x2: cx, y2: H-BOT, stroke: own, 'stroke-width': 1.5, opacity: 0.5 });
+    add('circle', { cx, cy, r: 5, fill: gain, stroke: cssVar('--surface-1'), 'stroke-width': 2 });
+    $('now-' + s.key).innerHTML = `${fmt(cur, 3)} &nbsp;→&nbsp; ${fmt(curValue, 3)}`;
+  } else {
+    $('now-' + s.key).innerHTML = `${fmt(cur, 3)} &nbsp;→&nbsp; undefined`;
+  }
+
+  const hit = add('rect', { x: L, y: T, width: W-L-R, height: H-T-BOT, fill: 'transparent', style: 'cursor:crosshair' });
+  hit.addEventListener('mousemove', evt => {
+    const box = svg.getBoundingClientRect();
+    const xv = s.lo + ((evt.clientX-box.left)/box.width*W - L)/(W-L-R)*(s.hi-s.lo);
+    let best = pts[0];
+    for (const p of pts) if (Math.abs(p.x-xv) < Math.abs(best.x-xv)) best = p;
+    showTip(evt, `${mh(s.key)} = ${fmt(best.x, 3)}<br>` +
+      (best.valid ? `${mh('gain')} = <b>${fmt(best.y, 4)}</b> (${formatPercent(best.y)})` : 'outside the model'));
+  });
+  hit.addEventListener('mouseleave', hideTip);
+}
+
+function drawSparkTable() {
+  /* Each row sweeps a different parameter, so a header of bare percentages meant five
+     different things at once. Every cell now carries its own x value. */
+  const fracs = [0, 0.25, 0.5, 0.75, 1];
+  let html = '<thead><tr><th>Parameter</th>' +
+    fracs.map(() => '<th>value → R²gain</th>').join('') + '</tr></thead><tbody>';
+  for (const s of SPARKS) {
+    const v = { rg: state.rg, re: state.re, hh2: state.hh2, ht2: state.ht2, rb2: state.rb2 };
+    html += `<tr><td>${s.label}</td>`;
+    for (const f of fracs) {
+      const x = s.lo + (s.hi - s.lo) * f;
+      v[s.key] = x;
+      const y = gainFast(v.rg, v.re, v.hh2, v.ht2, v.rb2);
+      html += `<td>${x.toFixed(2)} → ${Number.isFinite(y) ? fmt(y, 4) : '—'}</td>`;
+    }
+    html += '</tr>';
+  }
+  $('spark-table').innerHTML = html + '</tbody>';
+}
+
+/* ═══════════════ 03 · the three factors ═══════════════ */
+function drawFactors(res) {
+  const host = $('factors'), p = res.parts;
+  if (!p) {
+    host.innerHTML = '<p class="small muted" style="grid-column:1/-1;margin:0">Undefined for these values.</p>';
+    $('factor-product').textContent = ''; $('factor-calc').textContent = '';
+    $('dr2-nums').textContent = ''; $('gain-nums').textContent = '';
+    $('factor-what').textContent = ''; $('factor-note').textContent = '';
+    return;
+  }
+
+  /* Headroom is unbounded, so its meter shows the bounded quantity it is built from:
+     headroom/(1+headroom) = 1 - R2base, the share of variance the baseline leaves. */
+  const rb2 = state.rb2;
+  const f3 = n => Number.isFinite(n) ? n.toFixed(3) : '—';
+  const f4 = n => Number.isFinite(n) ? n.toFixed(4) : '—';
+
+  const tiles = [
+    /* The room to improve is the share of the target's variance the baseline has NOT
+       explained — a proportion in [0,1]. The unbounded (1-R2base)/R2base that appears in
+       Equation (13) is not that quantity: it is what you get after dividing by the baseline
+       to make the gain relative, which is done as a separate final step below. */
+    { label: 'Variance left unexplained', math: `1 − ${mh('rb2')}`, value: 1 - rb2, meter: 1 - rb2,
+      note: `the share of the target's variance the baseline has not explained`,
+      calc: `1 − ${f3(rb2)} = <b>${f3(1-rb2)}</b>` },
+
+    { label: 'Signal available', math: mh('rth2'), value: p.rth2, meter: clamp(p.rth2, 0, 1),
+      note: `the helper trait's total correlation with the target, squared; at the population level ${mh('rth')} is ${mh('rp')}`,
+      calc: `${mh('rp')}² = ${f3(p.rho_p)}² = <b>${f4(p.rth2)}</b>` },
+
+    { label: 'Non-redundant share', math: mh('oneMinusR'), value: p.nonRedundant,
+      meter: p.nonRedundant === null ? 0 : clamp(p.nonRedundant, 0, 1),
+      note: p.nonRedundant === null ? 'cannot be formed here — see below'
+          : p.nonRedundant > 1 ? `above 1: a suppression effect, outside the 0-to-1 range the paper's Methods assume`
+          : `${mh('Rcal')} is the redundancy, the share of the helper trait's signal the baseline already carries; here ${((1-p.nonRedundant)*100).toFixed(0)}% of it`,
+      calc: p.nonRedundant === null
+          ? `${mh('rthB2')} / ${mh('rth2')} = ${f4(p.rthB2)} / <b>0</b> — dividing by zero`
+          : `${mh('rthB2')} / ${mh('rth2')} = ${f4(p.rthB2)} / ${f4(p.rth2)} = <b>${f3(p.nonRedundant)}</b>` }
+  ];
+
+  host.innerHTML = tiles.map(t => `
+    <div class="tile">
+      <div class="tile-label">${t.label}</div>
+      <div class="tile-value">${t.value === null ? 'n/a' : fmt(t.value, 3)}</div>
+      <div class="meter"><div class="meter-fill" style="width:${(clamp(t.meter,0,1)*100).toFixed(1)}%"></div></div>
+      <div class="tile-note">${t.math} · ${t.note}</div>
+      <div class="tile-calc">${t.calc}</div>
+    </div>`).join('');
+
+  /* The third factor is the only one whose inputs are not on screen, so its chain is
+     spelled out: both correlations with the baseline predictor, then the partial
+     correlation they produce. */
+  const rthB = Math.sqrt((1 - rb2) * (1 - p.rhB * p.rhB)) > 0
+    ? (p.rho_p - p.rtB * p.rhB) / Math.sqrt((1 - rb2) * (1 - p.rhB * p.rhB)) : NaN;
+  $('factor-calc').innerHTML =
+    `<div class="r">${mh('rtB')} = √${mh('rb2')} = √${f3(rb2)} = <b>${f3(p.rtB)}</b>` +
+      `<span class="muted">&nbsp;— baseline vs target</span></div>` +
+    `<div class="r">${mh('rhB')} = ${mh('rg')} √(${mh('rb2')} · ${mh('ratio')}) = ` +
+      `${f3(state.rg)} × ${f3(Math.sqrt(rb2 * state.hh2 / state.ht2))} = <b>${f3(p.rhB)}</b>` +
+      `<span class="muted">&nbsp;— baseline vs helper</span></div>` +
+    `<div class="r">${mh('rth')} = ${mh('rp')} = <b>${f3(p.rho_p)}</b>` +
+      `<span class="muted">&nbsp;— helper vs target, on its own</span></div>` +
+    `<div class="r">${mh('rthB')} = (${mh('rth')} − ${mh('rtB')}${mh('rhB')}) / ` +
+      `√((1−${mh('rtB')}²)(1−${mh('rhB')}²)) = (${f3(p.rho_p)} − ${f3(p.rtB * p.rhB)}) / ` +
+      `${f3(Math.sqrt((1 - rb2) * (1 - p.rhB * p.rhB)))} = <b>${f3(rthB)}</b>` +
+      `<span class="muted">&nbsp;— helper vs target, with the baseline removed</span></div>`;
+
+  /* the same arithmetic the tiles show, set large and centred */
+  $('dr2-nums').innerHTML =
+    `${f3(1 - rb2)} &times; ${f4(p.rth2)} &times; ` +
+    `${p.nonRedundant === null ? '—' : f3(p.nonRedundant)} = <b>${f4(p.dR2)}</b> ` +
+    `<span class="muted">extra variance explained</span>`;
+  $('gain-nums').innerHTML =
+    `${f4(p.dR2)} / ${f3(rb2)} = <b>${fmt(res.value, 4)}</b> ` +
+    `<span class="muted">(${formatPercent(res.value)} relative to the baseline)</span>`;
+
+  $('factor-product').innerHTML = '';
+
+  $('factor-what').innerHTML =
+    `<b>${mh('rthB')} is the partial correlation:</b> the helper trait's association with the ` +
+    `target <em>among individuals the PGS already scores alike</em>. Subtracting ` +
+    `${mh('rtB')}${mh('rhB')} removes what the baseline already explains, and the denominator ` +
+    `rescales the remainder back to the −1 to 1 range. The square of this partial correlation, ` +
+    `divided by ${mh('rth2')}, is the non-redundant share.`;
+
+  const zeroGain = Math.abs(res.value) < 1e-12;
+  $('factor-note').innerHTML = p.nonRedundant === null
+    ? (zeroGain
+        /* both correlations are zero: there is genuinely nothing to split */
+        ? `<b>Why “n/a”?</b> The non-redundant share is the fraction of the helper trait's signal ` +
+          `that the baseline has <em>not</em> already captured. Here the helper trait has no ` +
+          `correlation with the target at all (${mh('rp')} = 0), so there is no signal to divide ` +
+          `into redundant and non-redundant parts — the fraction would be 0 ⁄ 0. The helper trait ` +
+          `adds nothing, and the gain is 0.`
+        /* the correlations cancel: rho_p is zero but the gain is NOT */
+        : `<b>Why “n/a”?</b> The genetic and environmental contributions cancel exactly, so ` +
+          `${mh('rp')} = 0 and the fraction would be 0 ⁄ 0 — yet the gain is a real ` +
+          `<b>${formatPercent(res.value)}</b>. The helper trait looks useless on its own, but ` +
+          `conditioning on the baseline PGS removes the genetic part that was cancelling and leaves ` +
+          `the environmental part visible. This is classical suppression: the split into “redundant” ` +
+          `and “non-redundant” breaks down, even though the gain itself is real.`)
+    : p.nonRedundant > 1
+      ? `The partial correlation exceeds the marginal one. This is a genuine suppression effect, ` +
+        `but it pushes ${mh('oneMinusR')} above 1.`
+      : '';
+}
+
+/* ═══════════════ 04 · heat maps ═══════════════ */
+const HM_N = 128;
+const HM_HH = [0, 1], HM_RHO = [-1, 1];
+const HM = { W: 480, H: 440, x0: 56, x1: 468, y0: 12, y1: 396 };
+const hmFields = { e: new Float64Array(HM_N*HM_N), g: new Float64Array(HM_N*HM_N) };
+const hmOff = {};
+
+function fillField(which, out) {
+  let max = 0;
+  const { ht2, rb2, rg, re } = state;
+  /* alpha > 1 is outside the paper's construction; mark the whole field invalid rather
+     than colour it, exactly as the response curves already do */
+  if (!(rb2 <= ht2 + 1e-12)) { out.fill(NaN); return 0; }
+  for (let j = 0; j < HM_N; j++) {
+    const rho = HM_RHO[0] + (HM_RHO[1]-HM_RHO[0])*j/(HM_N-1);
+    const useG = which === 'g' ? rho : rg, useE = which === 'e' ? rho : re;
+    for (let i = 0; i < HM_N; i++) {
+      const hh2 = HM_HH[0] + (HM_HH[1]-HM_HH[0])*i/(HM_N-1);
+      const v = gainFast(useG, useE, hh2, ht2, rb2);
+      const ok = Number.isFinite(v) && v >= 0;
+      out[j*HM_N+i] = ok ? v : NaN;
+      if (ok && v > max) max = v;
+    }
+  }
+  return max;
+}
+
+function drawHeatmaps() {
+  const max = Math.max(fillField('e', hmFields.e), fillField('g', hmFields.g), 1e-12);
+  paintHeat($('hm-a'), 'e', hmFields.e, max);
+  paintHeat($('hm-b'), 'g', hmFields.g, max);
+  $('hm-a-title').innerHTML = `<span class="pill">A</span> ${mh('rg')} fixed at ${fmt(state.rg, 2)}`;
+  $('hm-b-title').innerHTML = `<span class="pill">B</span> ${mh('re')} fixed at ${fmt(state.re, 2)}`;
+  $('cbar-hi').textContent = fmt(max, 3);
+  $('cbar-name').innerHTML = mh('gain') + '&nbsp;';
+  $('hm-regime').innerHTML = `${mh('ht2')} = ${fmt(state.ht2, 2)}`;
+  $('hm-colour-note').innerHTML =
+    `<b>Colour = ${mh('gain')}</b>, from white at 0 to dark purple at ${fmt(max, 3)}, the largest ` +
+    `value on either panel right now.`;
+  drawHeatCalc();
+}
+
+/* The heat map IS the closed form, so show it with the cross's own numbers put in. */
+function drawHeatCalc() {
+  const { rg, re, hh2, ht2, rb2 } = state;
+  /* the same guard computeGain uses — otherwise this block cheerfully prints a
+     negative R-squared beside a headline that correctly says "undefined" */
+  const denomOK = ht2 > 0 && rb2 > 0 && (1 - rg * rg * rb2 * hh2 / ht2) > 0;
+  if (![rg, re, hh2, ht2, rb2].every(Number.isFinite) || !denomOK) {
+    $('hm-calc').innerHTML = '<div class="r muted">Undefined for these values.</div>'; return;
+  }
+  const f3 = n => Number.isFinite(n) ? n.toFixed(3) : '—';
+  const ratio = hh2 / ht2;
+  const A = rg * Math.sqrt(ratio) * (ht2 - rb2);          /* genetic part of the numerator   */
+  const B = re * Math.sqrt((1 - ht2) * (1 - hh2));        /* environmental part              */
+  const num = (A + B) * (A + B);
+  const inner = 1 - rg * rg * rb2 * ratio;
+  const den = rb2 * inner;
+  $('hm-calc').innerHTML =
+    `<div class="r muted">at the white cross — ${mh('hh2')} = ${f3(hh2)}, ${mh('rg')} = ${f3(rg)}, ` +
+      `${mh('re')} = ${f3(re)}, ${mh('ht2')} = ${f3(ht2)}, ${mh('rb2')} = ${f3(rb2)}</div>` +
+    `<div class="r">numerator = [ ${f3(rg)} × √(${f3(hh2)}/${f3(ht2)}) × (${f3(ht2)} − ${f3(rb2)}) ` +
+      `+ ${f3(re)} × √((1−${f3(ht2)})(1−${f3(hh2)})) ]²</div>` +
+    `<div class="r">&nbsp;&nbsp;= [ ${f3(A)} + ${f3(B)} ]² = <b>${num.toFixed(4)}</b></div>` +
+    `<div class="r">denominator = ${f3(rb2)} × [ 1 − ${f3(rg * rg)} × ${f3(rb2)} × ${f3(ratio)} ] ` +
+      `= ${f3(rb2)} × ${f3(inner)} = <b>${den.toFixed(4)}</b></div>` +
+    `<div class="r tot">${mh('gain')} = ${num.toFixed(4)} / ${den.toFixed(4)} = ` +
+      `<b>${fmt(num / den, 4)}</b>&nbsp;(${formatPercent(num / den)})</div>`;
+}
+
+const useSqrt = () => $('hm-sqrt').checked;
+
+function paintHeat(canvas, which, field, max) {
+  let off = hmOff[which];
+  if (!off) { off = hmOff[which] = document.createElement('canvas'); off.width = HM_N; off.height = HM_N; }
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(HM_N, HM_N);
+  for (let j = 0; j < HM_N; j++) {
+    for (let i = 0; i < HM_N; i++) {
+      const v = field[j*HM_N+i];
+      /* image row 0 is the TOP, while the y axis runs -1 at the bottom to +1 at the top */
+      const px = ((HM_N-1-j)*HM_N + i)*4;
+      if (!Number.isFinite(v)) { img.data[px]=170; img.data[px+1]=170; img.data[px+2]=170; img.data[px+3]=45; }
+      else {
+        const c = rampColor(useSqrt() ? Math.sqrt(v/max) : v/max);
+        img.data[px]=c[0]; img.data[px+1]=c[1]; img.data[px+2]=c[2]; img.data[px+3]=255;
+      }
+    }
+  }
+  octx.putImageData(img, 0, 0);
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  ctx.clearRect(0, 0, HM.W, HM.H);
+  ctx.fillStyle = cssVar('--surface-1'); ctx.fillRect(0, 0, HM.W, HM.H);
+  const pw = HM.x1-HM.x0, ph = HM.y1-HM.y0;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(off, HM.x0, HM.y0, pw, ph);
+  ctx.strokeStyle = cssVar('--axis'); ctx.lineWidth = 1;
+  ctx.strokeRect(HM.x0+0.5, HM.y0+0.5, pw-1, ph-1);
+
+  /* axes drawn into the canvas so nothing can drift out of alignment with the field.
+     Canvas has no tspans, so these are words rather than badly-set symbols. */
+  ctx.font = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.fillStyle = cssVar('--text-muted');
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  [0,0.25,0.5,0.75,1].forEach(f => ctx.fillText((HM_HH[0]+(HM_HH[1]-HM_HH[0])*f).toFixed(2), HM.x0+f*pw, HM.y1+7));
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  [-1,-0.5,0,0.5,1].forEach(v => ctx.fillText(v.toFixed(1), HM.x0-8, HM.y1-(v-HM_RHO[0])/2*ph));
+  ctx.fillStyle = cssVar('--text-secondary');
+  ctx.font = '12.5px system-ui, -apple-system, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Helper trait heritability', HM.x0+pw/2, HM.y1+26);
+  ctx.save();
+  ctx.translate(16, HM.y0+ph/2); ctx.rotate(-Math.PI/2); ctx.textBaseline = 'middle';
+  ctx.fillText(which === 'e' ? 'Environmental correlation' : 'Genetic correlation', 0, 0);
+  ctx.restore();
+
+  const cx = HM.x0 + (clamp(state.hh2, HM_HH[0], HM_HH[1])-HM_HH[0])/(HM_HH[1]-HM_HH[0])*pw;
+  const yv = which === 'e' ? state.re : state.rg;
+  const cy = HM.y1 - (clamp(yv,-1,1)-HM_RHO[0])/2*ph;
+  if (Number.isFinite(cx) && Number.isFinite(cy)) {
+    ctx.lineCap = 'round';
+    [[5,'rgba(0,0,0,0.38)'],[2.4,'#ffffff']].forEach(pv => {
+      ctx.strokeStyle = pv[1]; ctx.lineWidth = pv[0];
+      ctx.beginPath();
+      ctx.moveTo(cx-12, cy); ctx.lineTo(cx+12, cy);
+      ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy+12);
+      ctx.stroke();
+    });
+  }
+
+  if (!canvas.dataset.wired) {
+    canvas.dataset.wired = '1';
+    const toParams = evt => {
+      const box = canvas.getBoundingClientRect();
+      const lx = (evt.clientX-box.left)/box.width*HM.W, ly = (evt.clientY-box.top)/box.height*HM.H;
+      return {
+        inside: lx >= HM.x0-2 && lx <= HM.x1+2 && ly >= HM.y0-2 && ly <= HM.y1+2,
+        hh2: HM_HH[0] + (HM_HH[1]-HM_HH[0])*clamp((lx-HM.x0)/(HM.x1-HM.x0), 0, 1),
+        rho: HM_RHO[1] - 2*clamp((ly-HM.y0)/(HM.y1-HM.y0), 0, 1)
+      };
+    };
+    canvas.addEventListener('mousemove', evt => {
+      const q = toParams(evt);
+      if (!q.inside) { hideTip(); return; }
+      const y = gainFast(which === 'g' ? q.rho : state.rg, which === 'e' ? q.rho : state.re,
+                         q.hh2, state.ht2, state.rb2);
+      showTip(evt, `${mh('hh2')} = <b>${q.hh2.toFixed(2)}</b><br>` +
+        `${mh(which === 'e' ? 're' : 'rg')} = <b>${q.rho.toFixed(2)}</b><br>` +
+        (Number.isFinite(y) ? `${mh('gain')} = <b>${fmt(y,4)}</b>` : 'undefined'));
+    });
+    canvas.addEventListener('mouseleave', hideTip);
+    canvas.addEventListener('click', evt => {
+      const q = toParams(evt);
+      if (!q.inside) return;
+      stopSweep();
+      const t = { hh2: q.hh2 };
+      if (which === 'e') t.re = q.rho; else t.rg = q.rho;
+      tweenTo(t, 360);
+    });
+  }
+}
+
+function paintColorbar() {
+  const c = $('cbar'), ctx = c.getContext('2d');
+  for (let x = 0; x < c.width; x++) {
+    const f = x/(c.width-1);
+    ctx.fillStyle = rampCss(useSqrt() ? Math.sqrt(f) : f);
+    ctx.fillRect(x, 0, 1, c.height);
+  }
+}
+
+function drawHeatTable() {
+  /* both panels, not just A — this is the accessible twin of the figure */
+  const hs = [0.1, 0.3, 0.5, 0.7, 0.9], rs = [1, 0.5, 0, -0.5, -1];
+  let html = `<thead><tr><th>panel · correlation ╲ ${mh('hh2')}</th>` +
+             hs.map(h => `<th>${h.toFixed(1)}</th>`).join('') + '</tr></thead><tbody>';
+  for (const panel of [{ tag: 'A', sym: 're' }, { tag: 'B', sym: 'rg' }]) {
+    for (const r of rs) {
+      html += `<tr><td>${panel.tag} · ${mh(panel.sym)} = ${r.toFixed(1)}</td>`;
+      for (const h of hs) {
+        const y = panel.sym === 're'
+          ? gainFast(state.rg, r, h, state.ht2, state.rb2)
+          : gainFast(r, state.re, h, state.ht2, state.rb2);
+        html += `<td>${Number.isFinite(y) ? fmt(y, 3) : '—'}</td>`;
+      }
+      html += '</tr>';
+    }
+  }
+  $('hm-table').innerHTML = html + '</tbody>';
+}
+
+let sweepRAF = null, sweepSaved = null;
+function stopSweep() {
+  if (sweepRAF) {
+    cancelAnimationFrame(sweepRAF); sweepRAF = null;
+    /* the sweep drives R2_base as well as h2_t; hand both back untouched */
+    if (sweepSaved) { state.ht2 = sweepSaved.ht2; state.rb2 = sweepSaved.rb2; sweepSaved = null; }
+    $('hm-play').innerHTML = '▶ Sweep ' + mh('ht2');
+    syncInputs(); render();
+  }
+}
+function toggleSweep() {
+  if (sweepRAF) { stopSweep(); return; }
+  stopTween();
+  sweepSaved = { ht2: state.ht2, rb2: state.rb2 };
+  $('hm-play').textContent = '❙❙ Pause';
+  const t0 = performance.now(), PERIOD = 7000, LO = 0.1, HI = 0.9;
+  const step = now => {
+    const phase = ((now-t0) % PERIOD)/PERIOD;
+    const tri = phase < 0.5 ? phase*2 : 2 - phase*2;
+    const ht2 = HI - (HI-LO)*(0.5 - 0.5*Math.cos(Math.PI*tri));
+    state.ht2 = ht2;
+    state.rb2 = 0.1 * ht2;   /* hold alpha at 0.1, as Figures 3 and 4 both do */
+    syncInputs(); render();
+    sweepRAF = requestAnimationFrame(step);
+  };
+  sweepRAF = requestAnimationFrame(step);
+}
+
+/* ═══════════════ 05 · same rho_p, different helper ═══════════════
+   The family is indexed by rho_g itself — a quantity already on the page — and rho_e is
+   whatever it must be to keep rho_p fixed. Nothing extra to learn. */
+function drawMix() {
+  const svg = $('mix-svg');
+  clearSvg(svg);
+  const tiles = $('mix-tiles');
+  const { rg, re, ht2, hh2, rb2 } = state;
+  const { kg, ke } = kgke();
+
+  if (![rg, re, ht2, hh2, rb2].every(Number.isFinite) || !(kg > 0) || !(ke > 0) || !(rb2 > 0)) {
+    tiles.innerHTML = `<p class="small muted" style="grid-column:1/-1;margin:0">Undefined for these values.</p>`;
+    $('mix-calc').innerHTML = ''; $('mix-note').textContent = '';
+    return;
+  }
+
+  const rhoP = currentRhoP();
+  const RG = rgRange(rhoP);
+  const f3 = n => Number.isFinite(n) ? n.toFixed(3) : '—';
+  const show = v => Number.isFinite(v) ? formatPercent(v) : '—';
+
+  /* rho_e implied by a given rho_g, at this fixed rho_p */
+  const reAt = g => (rhoP - g * kg) / ke;
+  const gainAt = g => gainFast(g, reAt(g), hh2, ht2, rb2);
+
+  /* The two ends that MEAN something: one channel supplies the whole correlation and the
+     other is zero. Using the full feasible span instead put one correlation at +/-1 with
+     the other fighting it — at the defaults, rho_g = -0.60 while rho_e = +1.00, which no
+     honest label could call "environment carries it". Clipped where +/-1 bites. */
+  /* At rho_p = 0 the "purely environmental" and "purely genetic" traits are the same
+     trait (both correlations zero), so fall back to the widest feasible pair. */
+  const nearZero = Math.abs(rhoP) < 1e-6;
+  const gEnv = nearZero ? RG.lo : clamp(0, RG.lo, RG.hi);
+  const gGen = nearZero ? RG.hi : clamp(rhoP / kg, RG.lo, RG.hi);
+  const pureEnv = !nearZero && Math.abs(gEnv) < 1e-9;
+  const pureGen = !nearZero && Math.abs(reAt(gGen)) < 1e-9;
+  const labEnv = nearZero ? `Lowest ${mh('rg')}` : (pureEnv ? 'Entirely environmental' : 'As environmental as possible');
+  const labGen = nearZero ? `Highest ${mh('rg')}` : (pureGen ? 'Entirely genetic' : 'As genetic as possible');
+  /* keep the reader's own point on the curve even if it sits outside that span */
+  const lo = Math.min(gEnv, gGen, clamp(rg, RG.lo, RG.hi));
+  const hi = Math.max(gEnv, gGen, clamp(rg, RG.lo, RG.hi));
+
+  const vLo = gainAt(gEnv), vHi = gainAt(gGen), vNow = gainAt(rg);
+  const ratio = (Number.isFinite(vLo) && Number.isFinite(vHi) && Math.min(vLo, vHi) > 1e-12)
+    ? Math.max(vLo, vHi) / Math.min(vLo, vHi) : null;
+
+  tiles.innerHTML = `
+    <div class="tile">
+      <div class="tile-label"><span class="dot" style="background:var(--c-re);display:inline-block;vertical-align:middle;margin-right:5px"></span>${labEnv}</div>
+      <div class="tile-value">${show(vLo)}</div>
+      <div class="tile-note">${mh('rg')} = ${f3(gEnv)}, ${mh('re')} = ${f3(reAt(gEnv))}${pureEnv ? ' — no shared genes at all' : ''}</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label"><span class="dot" style="background:var(--c-rg);display:inline-block;vertical-align:middle;margin-right:5px"></span>${labGen}</div>
+      <div class="tile-value">${show(vHi)}</div>
+      <div class="tile-note">${mh('rg')} = ${f3(gGen)}, ${mh('re')} = ${f3(reAt(gGen))}${pureGen ? ' — no shared environment at all' : ''}</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label"><span class="dot" style="background:var(--c-gain);display:inline-block;vertical-align:middle;margin-right:5px"></span>Your settings</div>
+      <div class="tile-value">${show(vNow)}</div>
+      <div class="tile-note">${mh('rg')} = ${f3(rg)}, ${mh('re')} = ${f3(re)}</div>
+    </div>`;
+
+  $('mix-calc').innerHTML =
+    `<div class="r muted">every helper trait below has the same ${mh('rp')} = ${f3(rhoP)}</div>` +
+    `<div class="r">${mh('rp')} = ${mh('rg')}${mh('wg')} + ${mh('re')}${mh('we')} = ` +
+      `${f3(rg)} × ${f3(kg)} + ${f3(re)} × ${f3(ke)} = <b>${f3(rhoP)}</b></div>` +
+    `<div class="r">so ${mh('re')} = (${mh('rp')} − ${mh('rg')}${mh('wg')}) / ${mh('we')} = ` +
+      `(${f3(rhoP)} − ${f3(rg * kg)}) / ${f3(ke)} = <b>${f3(re)}</b></div>` +
+    `<div class="r tot">The two ends are ${mh('rg')} = ${f3(gEnv)}, where the whole correlation ` +
+      `comes from shared environment, and ${mh('rg')} = ${f3(gGen)}, where it all comes from shared ` +
+      `genes. Every value in between describes another helper trait with the same ${mh('rp')}.</div>`;
+
+  /* the curve across the family */
+  const W = 720, H = 240, L = 62, R = 20, T = 16, BOT = 44;
+  const add = (t, a, txt) => { const e = svgEl(t, a); if (txt != null) e.textContent = txt; svg.appendChild(e); return e; };
+  const N = 161, pts = [];
+  for (let i = 0; i < N; i++) { const g = lo + (hi - lo) * i / (N - 1); pts.push({ g, y: gainAt(g) }); }
+  const ys = pts.map(q => q.y).filter(Number.isFinite);
+  if (!ys.length) { $('mix-note').textContent = ''; return; }
+
+  const y1 = Math.max.apply(null, ys) * 1.14 || 1, y0 = 0;
+  const sx = v => L + (v - lo) / ((hi - lo) || 1) * (W - L - R);
+  const sy = v => T + (1 - (v - y0) / (y1 - y0)) * (H - T - BOT);
+  const muted = cssVar('--text-muted'), sec = cssVar('--text-secondary'),
+        gain = cssVar('--c-gain'), surf = cssVar('--surface-1');
+
+  for (let i = 0; i <= 3; i++) {
+    const yv = y0 + (y1 - y0) * i / 3;
+    add('line', { x1: L, y1: sy(yv), x2: W - R, y2: sy(yv), stroke: cssVar('--grid'), 'stroke-width': 1 });
+    add('text', { x: L - 8, y: sy(yv) + 4, 'text-anchor': 'end', 'font-size': 11, fill: muted,
+                  'font-variant-numeric': 'tabular-nums' }, fmt(yv, 3));
+  }
+  let d = '';
+  for (const q of pts) if (Number.isFinite(q.y)) d += (d ? 'L' : 'M') + sx(q.g).toFixed(2) + ' ' + sy(q.y).toFixed(2) + ' ';
+  add('path', { d, fill: 'none', stroke: gain, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+
+  add('line', { x1: L, y1: H - BOT, x2: W - R, y2: H - BOT, stroke: cssVar('--axis'), 'stroke-width': 1 });
+  const ticks = (hi - lo) < 1e-6 ? [lo] : [lo, (lo + hi) / 2, hi];
+  ticks.forEach(g => {
+    add('text', { x: clamp(sx(g), L + 12, W - R - 12), y: H - BOT + 17, 'text-anchor': 'middle',
+                  'font-size': 11, fill: muted, 'font-variant-numeric': 'tabular-nums' }, g.toFixed(2));
+  });
+  svg.appendChild(mathText({ x: (L + W - R) / 2, y: H - 8, 'text-anchor': 'middle', fill: sec },
+                           cat(['genetic correlation  '], SYM.rg, ['  →']), 12));
+  svg.appendChild(mathText({ x: 2, y: T + 6, fill: sec }, SYM.gain, 11));
+
+  const endDot = (g, v, colour, label, anchor) => {
+    if (!Number.isFinite(v)) return;
+    const x = sx(g), y = sy(v);
+    add('circle', { cx: x, cy: y, r: 6, fill: colour, stroke: surf, 'stroke-width': 2 });
+    add('text', { x: anchor === 'start' ? x + 11 : x - 11, y: y - 11, 'text-anchor': anchor,
+                  'font-size': 11.5, fill: cssVar('--text-primary'), 'font-weight': 600 }, label);
+  };
+  endDot(gEnv, vLo, cssVar('--c-re'),
+         nearZero ? 'lowest' : (pureEnv ? 'entirely environmental' : 'as environmental as possible'),
+         gEnv <= gGen ? 'start' : 'end');
+  endDot(gGen, vHi, cssVar('--c-rg'),
+         nearZero ? 'highest' : (pureGen ? 'entirely genetic' : 'as genetic as possible'),
+         gEnv <= gGen ? 'end' : 'start');
+
+  if (Number.isFinite(vNow)) {
+    const x = sx(clamp(rg, lo, hi)), y = sy(clamp(vNow, y0, y1));
+    add('line', { x1: x, y1: T, x2: x, y2: H - BOT, stroke: gain, 'stroke-width': 1, opacity: 0.35 });
+    add('circle', { cx: x, cy: y, r: 6.5, fill: gain, stroke: surf, 'stroke-width': 2 });
+  }
+
+  $('mix-note').innerHTML = ratio && ratio > 1.05
+    ? `Both ends have ${mh('rp')} = ${f3(rhoP)}, but one is built purely from shared environment ` +
+      `and the other purely from shared genes, and one is worth <b>${ratio.toFixed(1)}×</b> the other.`
+    : `At these heritabilities the two ends give similar gains. Move ${mh('ht2')} toward 0.1 or 0.9 ` +
+      `to open the gap.`;
+}
+
+/* Warning and error text, properly typeset and actually explained. The CORE block stays
+   free of the DOM, so it returns a `code` and the wording lives here. */
+function msgHTML(res) {
+  const p = res.parts;
+  switch (res.code) {
+    case 'alpha': {
+      const a = p ? fmt(p.alpha, 3) : '—';
+      return `<b>Outside the model.</b> ${mh('alpha')} = ${mh('rb2')} / ${mh('ht2')} = ${a}. ` +
+             `Because ${mh('alpha')} is the share of the target's heritability the baseline PGS ` +
+             `captures, it should not exceed 1: a genetic predictor cannot explain more genetic ` +
+             `variance than the trait has. Lower ${mh('rb2')} or raise ${mh('ht2')}. The number ` +
+             `above is still computed, but the paper excludes this region.`;
+    }
+    case 'denom':
+      return `<b>Undefined here.</b> The denominator ` +
+             `1 − ${mh('rgsq')} · ${mh('rb2')} · ${mh('ratio')} has reached zero, which means the ` +
+             `helper trait has become perfectly predictable from the baseline PGS. It then carries ` +
+             `no independent information, and a relative gain has no finite value.`;
+    case 'ht2zero':
+      return `<b>${mh('ht2')} must be above 0.</b> With no heritable variance there is no polygenic ` +
+             `signal to improve on, and the formula divides by ${mh('ht2')}.`;
+    case 'rb2zero':
+      return `<b>${mh('rb2')} must be above 0.</b> ${mh('gain')} is a <em>relative</em> gain, so it ` +
+             `divides by the baseline's accuracy. Against a baseline of zero any improvement would ` +
+             `be infinite.`;
+    default:
+      return res.message;
+  }
+}
+
+/* ═══════════════ RENDER ═══════════════ */
+function render() {
+  refreshTokens();
+  const res = computeGain(state);
+  const cur = (res.value !== null && Number.isFinite(res.value)) ? res.value : NaN;
+
+  for (const p of panels) {
+    p.out.v.textContent = res.status === 'error' ? 'undefined' : formatValue(res.value);
+    p.out.s.textContent = res.status === 'error' ? '' : formatPercent(res.value);
+    if (res.message) {
+      p.msg.hidden = false;
+      p.msg.className = 'msg ' + (res.status === 'error' ? 'error' : 'warn');
+      p.msg.innerHTML = msgHTML(res);
+    } else p.msg.hidden = true;
+  }
+
+  drawAnatomy();
+  drawRhoP();
+  /* Spell the substitution out: the two numbers in Figure B are the CORRELATIONS times
+     weights built from the two heritabilities, which is not obvious from the picture alone. */
+  const { rg, re, ht2, hh2 } = state;
+  if ([rg, re, ht2, hh2].every(Number.isFinite)) {
+    const wg = Math.sqrt(ht2 * hh2), we = Math.sqrt((1 - ht2) * (1 - hh2));
+    const gC = rg * wg, eC = re * we, rp = gC + eC;
+    const sgn = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+    $('rhop-calc').innerHTML =
+      `<div class="r"><span class="dot" style="background:var(--c-rg)"></span>` +
+        `${mh('rg')} × ${mh('wg')} = ${fmt(rg,2)} × ${wg.toFixed(3)} = <b>${sgn(gC)}</b></div>` +
+      `<div class="r"><span class="dot" style="background:var(--c-re)"></span>` +
+        `${mh('re')} × ${mh('we')} = ${fmt(re,2)} × ${we.toFixed(3)} = <b>${sgn(eC)}</b></div>` +
+      `<div class="r tot">${mh('rp')} = ${gC.toFixed(3)} ${eC >= 0 ? '+' : '−'} ` +
+        `${Math.abs(eC).toFixed(3)} = <b>${rp.toFixed(3)}</b></div>`;
+  } else {
+    $('rhop-calc').innerHTML = '';
+  }
+
+  const q = res.parts;
+  $('derived-line').innerHTML = q
+    ? `${mh('rp')} = <b>${fmt(q.rho_p,3)}</b> &nbsp;·&nbsp; ${mh('alpha')} = <b>${fmt(q.alpha,2)}</b> ` +
+      `<span class="muted">(share of ${mh('ht2')} the PGS captures)</span> ` +
+      `&nbsp;·&nbsp; joint ${mh('R2')} = <b>${fmt(state.rb2 + q.dR2, 3)}</b> ` +
+      `<span class="muted">(baseline plus gain)</span>`
+    : '';
+
+  for (const s of SPARKS) drawSpark(s, cur);
+  drawFactors(res);
+  drawHeatmaps();
+  drawMix();
+
+  /* the table views are the accessible twin of each chart, but expensive to rebuild —
+     only do it while one is actually open */
+  if ($('det-spark').open) drawSparkTable();
+  if ($('det-hm').open) drawHeatTable();
+}
+
+/* ═══════════════ BOOT ═══════════════
+   Deferred to DOMContentLoaded on purpose: KaTeX loads with `defer`, so it has executed
+   by then. Booting inline would call mh() while `katex` was still undefined and bake the
+   plain-HTML fallback into every label. */
+function boot() {
+  buildPanel('panel-1', { defs: true, presets: true });
+  buildPanel('panel-2', {});
+  buildPanel('panel-3', {});
+  buildPanel('panel-4', {});
+  buildPanel('panel-5', { pinRhoP: true });
+  buildSparks();
+  paintColorbar();
+  $('hm-play').innerHTML = '▶ Sweep ' + mh('ht2');
+
+  $('hm-play').addEventListener('click', toggleSweep);
+  $('hm-sqrt').addEventListener('change', () => { paintColorbar(); drawHeatmaps(); });
+  $('det-spark').addEventListener('toggle', () => { if ($('det-spark').open) drawSparkTable(); });
+  $('det-hm').addEventListener('toggle', () => { if ($('det-hm').open) drawHeatTable(); });
+
+  $('theme-toggle').addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const now = cur ? cur : (sysDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', now === 'dark' ? 'light' : 'dark');
+    paintColorbar(); render();
+  });
+
+  window.addEventListener('resize', () => { clearTimeout(window.__rz); window.__rz = setTimeout(render, 120); });
+
+  render();
+
+  if (!REDUCED) {
+    const target = {};
+    for (const v of VARS) target[v.key] = VAR_META[v.key].start;
+    Object.assign(state, { rg: 0.02, re: 0.02, hh2: 0.5, ht2: 0.5, rb2: 0.1 });
+    syncInputs(); render();
+    introTimer = setTimeout(() => { introTimer = null; tweenTo(target, 1000); }, 260);
+  }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+</script>
+</body>
+</html>
