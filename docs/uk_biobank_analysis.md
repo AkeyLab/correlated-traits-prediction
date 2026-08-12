@@ -18,11 +18,21 @@ None of that analysis is in this repository. Specifically, the following are **n
 The selection algorithm itself is fully specified as pseudocode in Supplementary Methods 1 of
 the paper, so it is reimplementable from the text; the surrounding pipeline is not.
 
+## Where it lives
+
+The empirical analysis runs on the **UK Biobank Research Analysis Platform (DNAnexus)**, not
+on local infrastructure. The code sits inside that controlled-access environment, which is
+why it does not appear in this repository or anywhere in the authors' local research tree.
+
+Releasing it means exporting the analysis code — and only the code — off the platform, then
+confirming that nothing exported embeds participant-level values, cohort identifiers, or
+intermediate per-individual files. Export of code is permitted; export of data is not.
+
 ## Why it is not here
 
-The analysis runs against **individual-level UK Biobank data**, which is controlled-access.
-This repository is intentionally free of any code path that reads participant-level records,
-so that it can be published openly without a data-governance review.
+The analysis reads **individual-level UK Biobank data**, which is controlled-access. This
+repository is intentionally free of any code path that touches participant-level records, so
+that it can be published openly without a data-governance review.
 
 ## Getting the data
 
@@ -41,8 +51,11 @@ were conducted under **application number 104628**.
 ## If this pipeline is added later
 
 Genome Biology requires that analysis code be publicly available, and holds papers in
-production until it is. If the UK Biobank pipeline is released, it should live in a
-`ukbiobank/` directory here with:
+production until it is — so this is a submission blocker, not an optional extra. The code
+being on the Research Analysis Platform does not exempt it; it has to be exported and
+published.
+
+If the UK Biobank pipeline is released, it should live in a `ukbiobank/` directory here with:
 
 - extraction scripts that take **field IDs**, never participant identifiers;
 - the REGENIE and PLINK invocations, with their exact parameters;

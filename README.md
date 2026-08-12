@@ -50,10 +50,11 @@ This repository covers the **theoretical and simulation** results: Figures 2, 3,
 and S3, plus the derivation checks.
 
 It does **not** contain the UK Biobank type 2 diabetes analysis (Figure 5, and the
-AUC-ROC values 0.677 / 0.907 / 0.889 quoted in the abstract). That analysis runs against
-controlled-access individual-level data and is not part of this codebase. See
-[`docs/uk_biobank_analysis.md`](docs/uk_biobank_analysis.md) for what would be needed to add
-it and how to request the underlying data.
+AUC-ROC values 0.677 / 0.907 / 0.889 quoted in the abstract). That analysis runs on the UK
+Biobank Research Analysis Platform against controlled-access individual-level data, and lives
+inside that environment. See [`docs/uk_biobank_analysis.md`](docs/uk_biobank_analysis.md) for
+exactly what is missing, how to request the underlying data, and what releasing that code
+would involve.
 
 ---
 
