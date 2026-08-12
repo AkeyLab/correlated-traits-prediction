@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "correlated-traits-prediction"
+version = "1.0.0"
+description = "Theory and simulation code for using correlated traits to improve polygenic risk prediction"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Kaiqian Zhang" },
+    { name = "Robert Bierman" },
+    { name = "Joshua M. Akey", email = "jakey@princeton.edu" },
+]
+dependencies = ["numpy>=1.17", "matplotlib>=3.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

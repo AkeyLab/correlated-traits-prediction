@@ -1,0 +1,16 @@
+# Generated output. Everything under results/ is reproducible from the scripts.
+results/**
+!results/**/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
