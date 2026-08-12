@@ -42,6 +42,9 @@ the target trait is weakly heritable, a helper trait with **low** heritability i
 better choice, because its value lies in environmental signal the polygenic baseline cannot
 already contain.
 
+We've created an [interactive webpage](https://akeylab.github.io/correlated-traits-prediction)
+to help you build intuition.
+
 ---
 
 ## Scope — read this before you look for something that is not here
