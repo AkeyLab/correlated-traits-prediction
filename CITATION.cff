@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "Correlated traits improve risk prediction: theory and simulation code"
+abstract: >-
+  Theory and simulation code for a framework that identifies when genetically
+  and environmentally correlated helper traits improve polygenic prediction of
+  a target trait.
+authors:
+  - family-names: Zhang
+    given-names: Kaiqian
+    affiliation: "Lewis-Sigler Institute for Integrative Genomics, Princeton University"
+  - family-names: Bierman
+    given-names: Robert
+    affiliation: "Lewis-Sigler Institute for Integrative Genomics, Princeton University"
+  - family-names: Akey
+    given-names: Joshua M.
+    affiliation: "Lewis-Sigler Institute for Integrative Genomics, Princeton University"
+license: MIT
+version: 1.0.0
+preferred-citation:
+  type: article
+  title: "A Principled Framework for Using Correlated Traits to Improve Risk Prediction"
+  authors:
+    - family-names: Zhang
+      given-names: Kaiqian
+    - family-names: Bierman
+      given-names: Robert
+    - family-names: Akey
+      given-names: Joshua M.
+  journal: "Genome Biology"
+  year: 2026
+  notes: "Under review"
