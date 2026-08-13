@@ -65,46 +65,76 @@ would involve.
 
 Python 3.9 or newer. The only hard dependencies are NumPy and Matplotlib.
 
-```bash
-git clone <repository-url>
-cd correlated-traits-prediction
-uv sync
+This analysis ships as a Python package, `correlated_traits`, which installs one
+command-line program: **`correlated-traits`**. Each subcommand regenerates one piece of the
+paper — `correlated-traits figure2` writes Figure 2, `correlated-traits figures` writes all
+of them in dependency order, `correlated-traits verify` checks the output against the
+published arrays. `correlated-traits --help` lists every command, and the
+[table below](#reproducing-each-figure) maps them to figures.
+
+Nothing is hidden behind the CLI: it is a thin dispatcher over ordinary importable code, so
+you can also use the theory and simulation functions directly.
+
+```python
+from correlated_traits.theory import gain_closed_form
+from correlated_traits.simulate import SimulationConfig, heatmap_panel
 ```
 
-That installs the package and puts a `correlated-traits` command on the path. `uv.lock`
-records an exact dependency resolution, so `uv sync` gives everyone the same versions.
+> **Note — pre-merge URLs.** The commands below install from the `repackage` branch, because
+> that is where the packaged CLI currently lives. Once it is merged, drop the `@repackage`
+> suffix from every URL on this page so they track the default branch.
+
+### With uv
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager
+([installation instructions](https://docs.astral.sh/uv/getting-started/installation/)). You
+do not need to clone this repository — uv builds the package straight from GitHub and puts
+the command on your `PATH`:
+
+```bash
+uv tool install git+https://github.com/AkeyLab/correlated-traits-prediction@repackage
+correlated-traits --help
+```
+
+That is the whole installation. uv keeps the tool in its own isolated environment, so it
+cannot disturb anything else you have installed.
 
 <details>
 <summary>Without uv</summary>
 
+Install into a virtual environment rather than your system Python. This is not just tidiness:
+most current Python installations refuse a system-wide `pip install` outright with an
+`externally-managed-environment` error ([PEP 668](https://peps.python.org/pep-0668/)), and a
+virtual environment also keeps this package's NumPy and Matplotlib from colliding with
+versions another project needs.
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install .          # or: pip install -e .   for an editable checkout
+python -m venv correlated-traits-venv
+source correlated-traits-venv/bin/activate      # Windows: correlated-traits-venv\Scripts\activate
+pip install git+https://github.com/AkeyLab/correlated-traits-prediction@repackage
+correlated-traits --help
 ```
 
-The dependencies live in `pyproject.toml`; there is no separate requirements file.
-</details>
+Re-activate that environment in any new shell before running `correlated-traits`.
 
-You can also skip installation entirely — `uv run ./run.py <command>` resolves everything
-from the inline metadata in `run.py` on first use.
+</details>
 
 ---
 
 ## Quick start
 
-Reproduce the cheapest figure and confirm your environment matches the published numbers
-exactly. Takes about half a minute:
+After you have `correlated-traits --help` working, try
+reproducing the cheapest figure and confirm your environment matches the
+published numbers exactly. Takes about half a minute:
 
 ```bash
-uv run correlated-traits quick
+correlated-traits quick
 ```
 
 `correlated-traits --help` lists every command. Each one is also available on its own, so
 `correlated-traits figure2` regenerates just that figure.
 
-Everything is written to `results/` in the current directory (git-ignored). Redirect it with
-`--results-dir PATH` — valid on either side of the command — or by setting
-`CORRELATED_TRAITS_RESULTS`.
+Everything is written to `results/` in the current directory.
 
 ---
 
@@ -222,9 +252,23 @@ correlated-traits verify
 ```
 
 Exit status is 0 when everything matches to at least floating-point tolerance, so this works
-in CI. Note that a bit-for-bit match is expected on the same NumPy build; a different NumPy
-or BLAS can reorder reductions and produce agreement to ~1e-16 instead, which `verify`
-reports as `close` and still passes.
+in CI.
+
+**Which versions give an exact match.** The published figures were produced with
+**Python 3.10.9, NumPy 1.23.1 and Matplotlib 3.7.2** on Linux. Install those if you want
+`verify` to report `identical` for all eight arrays.
+
+Any reasonably recent NumPy should also reproduce them: `default_rng` guarantees a stable
+stream for the three distributions used here (`uniform`, `binomial`, `standard_normal`), so
+the draws themselves do not move. What can move is the last bit or two of a sum — a different
+NumPy or BLAS build may reorder reductions — in which case `verify` reports `close` rather
+than `identical` and still exits 0. Agreement at the ~1e-16 level is a floating-point
+artefact and affects no conclusion in the paper; anything larger is a real difference and
+`verify` fails.
+
+This is also why `pyproject.toml` sets lower bounds rather than pins. NumPy ≥ 1.17 is a hard
+floor: the simulation uses `numpy.random.default_rng`, and the legacy `RandomState` API draws
+different numbers and will not reproduce the published arrays at all.
 
 **3. Independent replication agrees within Monte Carlo error.** A separate seed reproduces
 the closed form with a mean signed deviation of +0.1% across the column, and the closed-form
