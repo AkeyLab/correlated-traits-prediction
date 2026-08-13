@@ -192,18 +192,22 @@ Every array is reported as `identical`, `close`, or `DIFFERS`. Exit status is 0 
 them match to at least floating-point tolerance and 1 otherwise, so this works in CI.
 `correlated-traits figures` ends by running it.
 
-**2. A one-second check that your environment behaves.** Worth running before committing to
-an hour-long job — it confirms your NumPy produces the expected random stream:
+**2. A one-second check that your install is sound.** Worth running before committing to an
+hour-long job:
 
 ```
 $ correlated-traits test
 PASS  simulation reproduces the reference implementation bit-for-bit
 PASS  two-predictor R^2 closed form matches an explicit least-squares fit
+PASS  8 published reference arrays ship with the package
 ```
 
 The first line runs the simulation at reduced scale against a frozen reference implementation
-embedded in the package. The second independently confirms that the two-predictor R² closed
-form the theory relies on agrees with an explicit least-squares fit.
+embedded in the package, confirming your NumPy produces the expected random stream. The
+second independently confirms that the two-predictor R² closed form the theory relies on
+agrees with an explicit least-squares fit. The third confirms the published arrays that
+`verify` compares against are actually present, so an incomplete install surfaces now rather
+than after an hour of simulation.
 
 **3. Independent replication agrees within Monte Carlo error.** A separate seed reproduces
 the closed form with a mean signed deviation of +0.1% across the column, and the closed-form

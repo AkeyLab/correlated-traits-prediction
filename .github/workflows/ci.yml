@@ -32,31 +32,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install .
-
-      - name: Command is on PATH
-        run: |
           correlated-traits --version
           correlated-traits --help
 
-      # Everything below runs from outside the checkout. That is the point: it
-      # catches a regression of the bug where paths resolved relative to the
-      # source tree and broke under a non-editable install.
-      - name: Reference arrays ship with the package
-        working-directory: ${{ runner.temp }}
-        run: |
-          python - <<'PY'
-          from correlated_traits import paths
-          array = paths.reference_array("Fig3_scenario1_highh_A.npy")
-          assert array.shape == (21, 9), array.shape
-          print("reference arrays load from", paths.reference_location())
-          PY
-
-      - name: Bit-for-bit equivalence check
-        working-directory: ${{ runner.temp }}
+      - name: Self-checks
+        working-directory: ${{ runner.temp }} #Run in a temp dir
         run: correlated-traits test
 
       - name: Quick figure
-        working-directory: ${{ runner.temp }}
+        working-directory: ${{ runner.temp }} #Run in a temp dir
         run: |
           correlated-traits quick --results-dir "${{ runner.temp }}/ct-results"
           test -s "${{ runner.temp }}/ct-results/figures/Fig2_validation.png"

@@ -15,11 +15,14 @@ Reduced scale is safe for this purpose: an ordering mistake changes the very
 first cell, so it does not hide behind a small sample size. The full-scale check
 against the published arrays is ``correlated-traits verify``.
 
+It also confirms that the published reference arrays actually shipped with the install,
+which nothing else here would notice.
+
 It lives in the package, and is exposed as ``correlated-traits test``, so that it runs
 from an installed copy with no pytest and no source checkout. For a user the useful
 framing is not the refactor history but the consequence: it is a one-second check that
-their NumPy build produces the expected random stream, worth running before committing
-to an hour-long job.
+their install is complete and their NumPy build produces the expected random stream,
+worth running before committing to an hour-long job.
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ from correlated_traits.simulate import heatmap_panel
 __all__ = [
     "check_package_matches_original",
     "check_closed_form_matches_least_squares",
+    "check_reference_arrays_present",
     "run",
 ]
 
@@ -174,9 +178,39 @@ def check_closed_form_matches_least_squares() -> None:
     )
 
 
+def check_reference_arrays_present() -> int:
+    """The published arrays ship inside the package and load at the right shape.
+
+    Nothing else here touches them: the equivalence check compares two in-process
+    implementations and never opens a file. So a packaging change that dropped the
+    reference data would go unnoticed until someone ran ``correlated-traits verify``
+    after an hour of simulation. Returns how many arrays were checked.
+    """
+    from correlated_traits import H2_HELPER_GRID
+    from correlated_traits import RHO_GRID as PUBLISHED_RHO_GRID
+    from correlated_traits import paths
+    from correlated_traits.figures.verify_reproducibility import EXPECTED
+
+    names = sorted(EXPECTED)
+    absent = [name for name in names if not paths.has_reference_array(name)]
+    assert not absent, (
+        "reference arrays missing from the package install: %s" % ", ".join(absent)
+    )
+
+    expected_shape = (len(PUBLISHED_RHO_GRID), len(H2_HELPER_GRID))
+    for name in names:
+        shape = paths.reference_array(name).shape
+        assert shape == expected_shape, (
+            "%s has shape %s, expected %s" % (name, shape, expected_shape)
+        )
+    return len(names)
+
+
 def run() -> None:
     """Run every check, printing a line per pass. Raises AssertionError on failure."""
     check_package_matches_original()
     print("PASS  simulation reproduces the reference implementation bit-for-bit")
     check_closed_form_matches_least_squares()
     print("PASS  two-predictor R^2 closed form matches an explicit least-squares fit")
+    count = check_reference_arrays_present()
+    print("PASS  %d published reference arrays ship with the package" % count)
