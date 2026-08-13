@@ -44,13 +44,14 @@ def main() -> int:
     print("%-38s %-12s %12s" % ("array", "status", "max |diff|"))
     print("-" * 64)
 
-    identical = close = missing = failed = 0
+    identical = close = missing = failed = no_reference = 0
 
     for name, producer in sorted(EXPECTED.items()):
         regenerated_path = paths.ARRAYS / name
 
         if not paths.has_reference_array(name):
             print("%-38s %-12s %12s" % (name, "no ref", "-"))
+            no_reference += 1
             continue
         if not regenerated_path.exists():
             print("%-38s %-12s %12s   run %s" % (name, "not run", "-", producer))
@@ -78,9 +79,17 @@ def main() -> int:
             failed += 1
 
     print("-" * 64)
-    print("%d identical, %d within tolerance, %d not yet regenerated, %d differing"
-          % (identical, close, missing, failed))
+    print("%d identical, %d within tolerance, %d not yet regenerated, %d differing, "
+          "%d reference missing"
+          % (identical, close, missing, failed, no_reference))
 
+    # Checked before anything else: with no references to compare against, every
+    # other counter stays at zero, which would otherwise read as a clean pass.
+    if no_reference:
+        print("\nFAIL: %d reference array(s) are missing. The published arrays ship inside "
+              "the package, so this usually means a broken or incomplete install."
+              % no_reference)
+        return 1
     if failed:
         print("\nFAIL: some arrays differ by more than %g." % TOLERANCE)
         return 1

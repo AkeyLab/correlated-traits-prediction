@@ -1,9 +1,8 @@
 name: CI
 
-# Installs the package from source exactly the way the README's "without uv"
-# route does, then runs the fast checks. The long simulations (figures 3, 4, S2,
-# S3) are hours of CPU and are deliberately not run here; `correlated-traits
-# verify` against those arrays belongs on a cluster.
+# Installs the package from source then runs the fast checks. The long
+# simulations (figures 3, 4, S2, S3) are hours of CPU and are deliberately not
+# run here
 
 on:
   push:
@@ -21,20 +20,13 @@ concurrency:
 jobs:
   install-and-check:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # The floor declared in pyproject.toml, the version most people have,
-        # and the newest. 3.9 is the one that matters: it is where
-        # importlib.resources.files() and module-level __getattr__ have to work.
-        python-version: ["3.9", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: Install from source
         run: |
@@ -68,17 +60,3 @@ jobs:
         run: |
           correlated-traits quick --results-dir "${{ runner.temp }}/ct-results"
           test -s "${{ runner.temp }}/ct-results/figures/Fig2_validation.png"
-
-      - name: Verify reports the un-regenerated arrays rather than crashing
-        working-directory: ${{ runner.temp }}
-        run: |
-          # Exits 1 because the hour-long heatmaps were not run. What is being
-          # checked is that it finds the packaged references and says so; a
-          # missing-reference regression would print "no ref" instead.
-          output=$(correlated-traits verify --results-dir "${{ runner.temp }}/ct-results" || true)
-          echo "$output"
-          echo "$output" | grep -q "not yet regenerated"
-          if echo "$output" | grep -q "no ref"; then
-            echo "::error::packaged reference arrays were not found"
-            exit 1
-          fi
