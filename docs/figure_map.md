@@ -17,8 +17,8 @@ Which script produces which figure, what it needs first, and where the output la
 | Figure | Content | Script | Output |
 |---|---|---|---|
 | S1 | Closed form against simulation | `figureS1_theory_vs_simulation.py` | `figures/FigureS1_theory_vs_simulation.{pdf,png}` |
-| S2 | Gain heatmaps, weakly heritable target, **strong** baseline | `figureS2_figureS3_heatmaps.py` | `figures/S2_scenario3_lowh_goodbase.png`<br>`arrays/S2_scenario3_lowh_goodbase_{A,B}.npy` |
-| S3 | Gain heatmaps, highly heritable target, **strong** baseline | `figureS2_figureS3_heatmaps.py` | `figures/S3_scenario4_highh_goodbase.png`<br>`arrays/S3_scenario4_highh_goodbase_{A,B}.npy` |
+| S2 | Gain heatmaps, **highly** heritable target, strong baseline | `figureS2_figureS3_heatmaps.py` | `figures/S3_scenario4_highh_goodbase.png`<br>`arrays/S3_scenario4_highh_goodbase_{A,B}.npy` |
+| S3 | Gain heatmaps, **weakly** heritable target, strong baseline | `figureS2_figureS3_heatmaps.py` | `figures/S2_scenario3_lowh_goodbase.png`<br>`arrays/S2_scenario3_lowh_goodbase_{A,B}.npy` |
 | S4 | Tag helper trait correlations with HbA1c | *not in this repository* — UK Biobank | — |
 
 ## Dependency order

@@ -170,8 +170,76 @@ def test_closed_form_matches_simulation_identity():
     )
 
 
+def test_closed_form_matches_the_published_arrays():
+    """The paper's headline equation must reproduce the simulated figures.
+
+    ``gain_closed_form`` is Equation 12 of the manuscript and the expression the
+    public calculator implements, yet nothing here exercised it. This checks it
+    against the published simulation arrays: the closed form is a population
+    quantity and the arrays are 30-replicate Monte Carlo averages, so they agree
+    closely but not exactly, and the tolerance below is on the correlation across
+    a whole panel rather than cell by cell.
+    """
+    import pathlib
+
+    from correlated_traits.theory import gain_closed_form
+
+    rho = np.linspace(-1, 1, 21)
+    h2h = np.round(np.linspace(0.1, 0.9, 9), 2)
+    grid_rho, grid_h2h = np.meshgrid(rho, h2h, indexing="ij")
+
+    reference = pathlib.Path(__file__).resolve().parents[1] / "reference" / "arrays"
+    if not reference.is_dir():
+        raise AssertionError("reference/arrays is missing; cannot validate the closed form")
+
+    # (file stem, h2_t, alpha, panel) -- panel A fixes rho_g = 0.9 and varies rho_e,
+    # panel B fixes rho_e = 0.9 and varies rho_g.
+    cases = [
+        ("Fig3_scenario1_highh", 0.9, 0.1),
+        ("Fig4_scenario2_lowh", 0.1, 0.1),
+        ("S2_scenario3_lowh_goodbase", 0.1, 0.9),
+        ("S3_scenario4_highh_goodbase", 0.9, 0.9),
+    ]
+
+    checked = 0
+    for stem, h2_t, alpha in cases:
+        r2_base = alpha * h2_t
+        for panel in ("A", "B"):
+            path = reference / ("%s_%s.npy" % (stem, panel))
+            if not path.exists():
+                raise AssertionError("missing reference array %s" % path)
+            simulated = np.load(path)
+            if panel == "A":
+                predicted = gain_closed_form(h2_t, grid_h2h, 0.9, grid_rho, r2_base)
+            else:
+                predicted = gain_closed_form(h2_t, grid_h2h, grid_rho, 0.9, r2_base)
+
+            r = np.corrcoef(predicted.ravel(), simulated.ravel())[0, 1]
+            assert r > 0.99, "%s panel %s: closed form vs simulation r = %.4f" % (stem, panel, r)
+            checked += 1
+
+    assert checked == 8, "expected to check 8 panels, checked %d" % checked
+
+
+def test_phenotypic_correlation_stays_a_correlation():
+    """rho_p must lie in [-1, 1] for every admissible parameter combination."""
+    from correlated_traits.theory import phenotypic_correlation
+
+    rng = np.random.default_rng(7)
+    h2_t = rng.uniform(0.01, 0.99, 20000)
+    h2_h = rng.uniform(0.01, 0.99, 20000)
+    rho_g = rng.uniform(-1, 1, 20000)
+    rho_e = rng.uniform(-1, 1, 20000)
+    rho_p = phenotypic_correlation(h2_t, h2_h, rho_g, rho_e)
+    assert np.all(np.abs(rho_p) <= 1 + 1e-12), "rho_p left [-1,1]: max |rho_p| = %.6f" % np.abs(rho_p).max()
+
+
 if __name__ == "__main__":
     test_package_matches_original_bit_for_bit()
     print("PASS  package reproduces the original implementation bit-for-bit")
     test_closed_form_matches_simulation_identity()
     print("PASS  two-predictor R^2 closed form matches an explicit least-squares fit")
+    test_closed_form_matches_the_published_arrays()
+    print("PASS  gain_closed_form reproduces all eight published simulation panels")
+    test_phenotypic_correlation_stays_a_correlation()
+    print("PASS  phenotypic correlation stays within [-1, 1]")

@@ -85,10 +85,19 @@ Reproduce the cheapest figure, which takes a few seconds and exercises the whole
 python scripts/figure2_theory_validation.py
 ```
 
-Then confirm your environment reproduces the published numbers exactly:
+Then confirm the package still matches the original implementation bit-for-bit:
 
 ```bash
 python tests/test_equivalence.py
+```
+
+This checks the refactor, not the published figures. To confirm the published numbers you
+must regenerate the arrays and compare them against `reference/arrays/`:
+
+```bash
+python scripts/figure3_figure4_heatmaps.py     # ~25 min
+python scripts/figureS2_figureS3_heatmaps.py   # ~25 min
+python scripts/verify_reproducibility.py
 ```
 
 Everything is written to `results/` (git-ignored). Set `CORRELATED_TRAITS_RESULTS` to
@@ -191,7 +200,14 @@ copy of the original implementation and asserts the package reproduces it to the
 $ python tests/test_equivalence.py
 PASS  package reproduces the original implementation bit-for-bit
 PASS  two-predictor R^2 closed form matches an explicit least-squares fit
+PASS  gain_closed_form reproduces all eight published simulation panels
+PASS  phenotypic correlation stays within [-1, 1]
 ```
+
+Note what this does and does not establish. The first check compares the package against a
+verbatim copy of the original implementation at reduced scale; it catches a refactor that
+changes the random-number consumption order, which is the failure mode it exists for. It does
+*not* by itself confirm the published figures — that is check 2.
 
 **2. Regenerated arrays match the published ones.** `reference/arrays/` holds the simulation
 arrays behind the published figures. After regenerating, compare:

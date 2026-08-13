@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Figures S2 and S3 -- the same heatmaps under a STRONG baseline.
 
-    Figure S2   Scenario 3: weakly  heritable target (h2_t = 0.1), alpha = 0.9
-    Figure S3   Scenario 4: highly heritable target (h2_t = 0.9), alpha = 0.9
+    Figure S3   Scenario 3: weakly  heritable target (h2_t = 0.1), alpha = 0.9
+    Figure S2   Scenario 4: highly heritable target (h2_t = 0.9), alpha = 0.9
 
 The only change from Figures 3 and 4 is ``alpha``: the baseline predictor now
 captures 90% of the target heritability instead of 10%. These two figures are
@@ -10,9 +10,11 @@ what the manuscript uses to argue that helper traits still pay off for a weakly
 heritable target even when the baseline is already strong, but stop paying off
 for a highly heritable one.
 
-Note the file naming, which is a known trap: the file whose name begins ``S2``
-is Scenario 3, and the one beginning ``S3`` is Scenario 4. The names follow the
-figure numbers in the manuscript, not the scenario numbers.
+Note the file naming, which is a known trap: the stems follow the SCENARIO
+numbering, not the manuscript's figure numbers, and the two are off by one.
+``S2_scenario3_*`` prints in the paper as Figure S3; ``S3_scenario4_*`` prints
+as Figure S2. The manuscript numbers supplementary figures by order of
+appearance in Additional file 1, where the Scenario 4 panel comes first.
 
 Runtime is comparable to Figures 3 and 4, roughly 30-60 minutes on one core.
 

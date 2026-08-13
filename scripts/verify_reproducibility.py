@@ -55,14 +55,15 @@ def main() -> int:
     print("%-38s %-12s %12s" % ("array", "status", "max |diff|"))
     print("-" * 64)
 
-    identical = close = missing = failed = 0
+    identical = close = missing = failed = no_reference = 0
 
     for name, producer in sorted(EXPECTED.items()):
         reference_path = REFERENCE_DIR / name
         regenerated_path = paths.ARRAYS / name
 
         if not reference_path.exists():
-            print("%-38s %-12s %12s" % (name, "no ref", "-"))
+            print("%-38s %-12s %12s" % (name, "NO REF", "-"))
+            no_reference += 1
             continue
         if not regenerated_path.exists():
             print("%-38s %-12s %12s   run %s" % (name, "not run", "-", producer))
@@ -90,9 +91,18 @@ def main() -> int:
             failed += 1
 
     print("-" * 64)
-    print("%d identical, %d within tolerance, %d not yet regenerated, %d differing"
-          % (identical, close, missing, failed))
+    print("%d identical, %d within tolerance, %d not yet regenerated, %d differing, "
+          "%d with no reference"
+          % (identical, close, missing, failed, no_reference))
 
+    if no_reference:
+        print("\nFAIL: %d of %d reference arrays are missing from %s, so there was nothing "
+              "to compare against. An empty reference directory must not report success."
+              % (no_reference, len(EXPECTED), REFERENCE_DIR))
+        return 1
+    if not (identical or close):
+        print("\nFAIL: no array was actually compared.")
+        return 1
     if failed:
         print("\nFAIL: some arrays differ by more than %g." % TOLERANCE)
         return 1
