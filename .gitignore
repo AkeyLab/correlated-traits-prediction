@@ -1,6 +1,5 @@
-# Generated output. Everything under results/ is reproducible from the scripts.
+# Generated output. Everything under results/ is reproducible from the CLI.
 results/**
-!results/**/.gitkeep
 
 # Python
 __pycache__/
@@ -8,6 +7,8 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+build/
+dist/
 .pytest_cache/
 
 # Editors and operating systems

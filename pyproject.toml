@@ -14,7 +14,23 @@ authors = [
     { name = "Robert Bierman" },
     { name = "Joshua M. Akey", email = "jakey@princeton.edu" },
 ]
+# Versions are lower bounds, not pins: the code uses only long-stable APIs. The
+# published figures were produced with numpy 1.23.1 and matplotlib 3.7.2 on
+# Python 3.10, and uv.lock records an exact resolution.
+#
+# numpy >= 1.17 is required because the simulation uses the Generator API
+# (numpy.random.default_rng); the legacy RandomState API produces different
+# numbers and will not reproduce the published arrays.
 dependencies = ["numpy>=1.17", "matplotlib>=3.3"]
+
+[project.scripts]
+correlated-traits = "correlated_traits.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=7"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+correlated_traits = ["reference/arrays/*.npy"]
