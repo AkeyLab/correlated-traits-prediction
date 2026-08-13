@@ -75,7 +75,7 @@ regenerate the figures and check them against what was published.
 > that is where the packaged CLI currently lives. Once it is merged, drop the `@repackage`
 > suffix from every URL on this page so they track the default branch.
 
-### With uv
+### Install with uv
 
 If you use [uv](https://docs.astral.sh/uv/) then you can install with:
 
@@ -84,8 +84,7 @@ uv tool install git+https://github.com/AkeyLab/correlated-traits-prediction@repa
 correlated-traits --help
 ```
 
-<details>
-<summary>Without uv</summary>
+### Install with pip instead
 
 Install into a virtual environment:
 
@@ -96,7 +95,6 @@ pip install git+https://github.com/AkeyLab/correlated-traits-prediction@repackag
 correlated-traits --help
 ```
 
-</details>
 
 ---
 
