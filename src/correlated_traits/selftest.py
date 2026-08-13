@@ -15,9 +15,11 @@ Reduced scale is safe for this purpose: an ordering mistake changes the very
 first cell, so it does not hide behind a small sample size. The full-scale check
 against the published arrays is ``correlated-traits verify``.
 
-It lives in the package rather than in ``tests/`` so that ``correlated-traits
-test`` works from an installed copy, with no pytest and no source checkout.
-``tests/test_equivalence.py`` is a thin pytest wrapper over the same functions.
+It lives in the package, and is exposed as ``correlated-traits test``, so that it runs
+from an installed copy with no pytest and no source checkout. For a user the useful
+framing is not the refactor history but the consequence: it is a one-second check that
+their NumPy build produces the expected random stream, worth running before committing
+to an hour-long job.
 """
 
 from __future__ import annotations
@@ -175,6 +177,6 @@ def check_closed_form_matches_least_squares() -> None:
 def run() -> None:
     """Run every check, printing a line per pass. Raises AssertionError on failure."""
     check_package_matches_original()
-    print("PASS  package reproduces the original implementation bit-for-bit")
+    print("PASS  simulation reproduces the reference implementation bit-for-bit")
     check_closed_form_matches_least_squares()
     print("PASS  two-predictor R^2 closed form matches an explicit least-squares fit")
