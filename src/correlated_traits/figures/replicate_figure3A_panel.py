@@ -13,7 +13,7 @@ The explicit least-squares route is not repeated here. It was already shown in
 ``replicate_figure3A_column.py`` to agree with the closed-form squared multiple
 correlation to about 1e-14, so only the closed form is evaluated.
 
-Runtime: roughly 10-30 minutes on one core.
+Runtime: about 13 seconds on one core.
 Output:  tables/replication_fig3A_panel.npz
          keys: mean, sd, se, rho_e_grid, h2_h_grid, and the design parameters
 """

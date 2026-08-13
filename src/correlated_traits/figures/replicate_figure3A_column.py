@@ -23,7 +23,7 @@ correlation from -1 to 1.
 This is a replication, not a reproduction: the seed differs from the published
 run on purpose.
 
-Runtime: a few minutes.
+Runtime: about 6 seconds.
 Output:  tables/replication_fig3A_column_hh2_0.6.csv
 """
 

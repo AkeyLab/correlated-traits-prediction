@@ -34,22 +34,22 @@ def _selftest() -> None:
 
 # Single-step commands: name -> (help text, callable).
 STEPS = {
-    "test": ("Bit-for-bit regression check (~10 seconds)",
+    "test": ("Bit-for-bit and install checks (~2 seconds)",
              _selftest),
-    "figure2": ("Figure 2, theory validation (seconds)",
+    "figure2": ("Figure 2, theory validation (~4 seconds)",
                 lambda: _run_module("figure2_theory_validation")),
-    "figure3-4": ("Figures 3 and 4, poor-baseline heatmaps (30-60 minutes)",
+    "figure3-4": ("Figures 3 and 4, poor-baseline heatmaps (~50 seconds)",
                   lambda: _run_module("figure3_figure4_heatmaps")),
-    "figureS2-S3": ("Figures S2 and S3, strong-baseline heatmaps (30-60 minutes)",
+    "figureS2-S3": ("Figures S2 and S3, strong-baseline heatmaps (~50 seconds)",
                     lambda: _run_module("figureS2_figureS3_heatmaps")),
-    "figureS1": ("Figure S1, closed form vs simulation (seconds; needs figure3-4 "
+    "figureS1": ("Figure S1, closed form vs simulation (~2 seconds; needs figure3-4 "
                  "and replicate-panel first)",
                  lambda: _run_module("figureS1_theory_vs_simulation")),
-    "replicate-column": ("Replicate one column of Figure 3A (a few minutes)",
+    "replicate-column": ("Replicate one column of Figure 3A (~6 seconds)",
                          lambda: _run_module("replicate_figure3A_column")),
-    "replicate-panel": ("Replicate all of Figure 3A with error bars (10-30 minutes)",
+    "replicate-panel": ("Replicate all of Figure 3A with error bars (~13 seconds)",
                         lambda: _run_module("replicate_figure3A_panel")),
-    "verify": ("Compare results/arrays against the published arrays (~1 second)",
+    "verify": ("Compare results/arrays against the published arrays (<1 second)",
                lambda: _run_module("verify_reproducibility")),
 }
 
@@ -60,13 +60,13 @@ STEPS = {
 # results/tables/replication_fig3A_panel.npz (from replicate-panel), so it must
 # come after both.
 PIPELINES = {
-    "quick": ("Figure 2 and the regression check (~30 seconds)",
+    "quick": ("Figure 2 and the self-checks (~6 seconds)",
               ["test", "figure2"]),
-    "heatmaps": ("Figures 3, 4, S2 and S3 (1-2 hours)",
+    "heatmaps": ("Figures 3, 4, S2 and S3 (~2 minutes)",
                  ["figure3-4", "figureS2-S3"]),
-    "replications": ("Uncertainty estimates behind Figure S1 (15-35 minutes)",
+    "replications": ("Uncertainty estimates behind Figure S1 (~20 seconds)",
                      ["replicate-column", "replicate-panel"]),
-    "figures": ("Every figure, in dependency order (1.5-2.5 hours)",
+    "figures": ("Every figure, in dependency order (~2 minutes)",
                 ["test", "figure2", "figure3-4", "figureS2-S3",
                  "replicate-column", "replicate-panel", "figureS1", "verify"]),
 }

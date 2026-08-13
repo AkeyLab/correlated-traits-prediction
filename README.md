@@ -100,7 +100,7 @@ correlated-traits --help
 
 After you have `correlated-traits --help` working, try the cheapest figure. It also runs the
 environment check, so it confirms your NumPy produces the expected numbers before you commit
-to anything longer. Takes about half a minute:
+to anything longer. Takes about five seconds:
 
 ```bash
 correlated-traits quick
@@ -114,18 +114,18 @@ Everything is written to `results/` in the current directory.
 
 | Figure | Command | What it shows | Runtime |
 |---|---|---|---|
-| **2** | `correlated-traits figure2` | Simulation matches the three-term decomposition, varying one determinant per panel | seconds |
-| **3, 4** | `correlated-traits figure3-4` | Predictive gain across ρ and helper heritability, **poor** baseline (α = 0.1) | 30–60 min |
-| **S2, S3** | `correlated-traits figureS2-S3` | The same, **strong** baseline (α = 0.9) | 30–60 min |
-| **S1** | `correlated-traits figureS1` | Closed form against simulation, with Monte Carlo error bands | seconds |
+| **2** | `correlated-traits figure2` | Simulation matches the three-term decomposition, varying one determinant per panel | 4 s |
+| **3, 4** | `correlated-traits figure3-4` | Predictive gain across ρ and helper heritability, **poor** baseline (α = 0.1) | 50 s |
+| **S2, S3** | `correlated-traits figureS2-S3` | The same, **strong** baseline (α = 0.9) | 50 s |
+| **S1** | `correlated-traits figureS1` | Closed form against simulation, with Monte Carlo error bands | 2 s |
 
 Two supporting commands quantify uncertainty, since the published heatmaps report averages
 without error bars:
 
 | Command | Purpose | Runtime |
 |---|---|---|
-| `correlated-traits replicate-column` | Re-runs one column with a different seed; gives per-cell standard errors and z-scores, and checks the closed-form R² identity against an explicit least-squares fit | a few min |
-| `correlated-traits replicate-panel` | The same over the full grid; produces the standard errors Figure S1 plots | 10–30 min |
+| `correlated-traits replicate-column` | Re-runs one column with a different seed; gives per-cell standard errors and z-scores, and checks the closed-form R² identity against an explicit least-squares fit | 6 s |
+| `correlated-traits replicate-panel` | The same over the full grid; produces the standard errors Figure S1 plots | 13 s |
 
 Dependency order — Figure S1 needs both of these first:
 
@@ -136,8 +136,11 @@ correlated-traits replicate-panel  ─┘
 ```
 
 `correlated-traits figures` runs everything in the correct order and finishes by verifying
-the output; `correlated-traits quick` runs only the fast commands. The grouping commands
-`heatmaps` and `replications` sit in between.
+the output, and takes about two minutes end to end. `correlated-traits quick` runs only the
+fastest pair; the grouping commands `heatmaps` and `replications` sit in between.
+
+Runtimes above were measured on one core of a 2026 cluster node. They are far shorter than
+the estimates this repository previously carried, which were never measured.
 
 `correlated-traits clean --yes` deletes the results tree.
 
@@ -192,8 +195,7 @@ Every array is reported as `identical`, `close`, or `DIFFERS`. Exit status is 0 
 them match to at least floating-point tolerance and 1 otherwise, so this works in CI.
 `correlated-traits figures` ends by running it.
 
-**2. A one-second check that your install is sound.** Worth running before committing to an
-hour-long job:
+**2. A two-second check that your install is sound.** Worth running first:
 
 ```
 $ correlated-traits test
@@ -206,8 +208,8 @@ The first line runs the simulation at reduced scale against a frozen reference i
 embedded in the package, confirming your NumPy produces the expected random stream. The
 second independently confirms that the two-predictor R² closed form the theory relies on
 agrees with an explicit least-squares fit. The third confirms the published arrays that
-`verify` compares against are actually present, so an incomplete install surfaces now rather
-than after an hour of simulation.
+`verify` compares against are actually present, so an incomplete install surfaces
+immediately rather than at the end of a full run.
 
 **3. Independent replication agrees within Monte Carlo error.** A separate seed reproduces
 the closed form with a mean signed deviation of +0.1% across the column, and the closed-form
@@ -221,9 +223,10 @@ Newer NumPy should reproduce them too, and usually reports `identical` as well. 
 guarantees a stable stream for the three distributions used here — `uniform`, `binomial` and
 `standard_normal` — so the draws themselves do not move between versions. What can move is
 the last bit of a sum, when a different NumPy or BLAS build reorders a reduction; `verify`
-then reports `close` instead and still exits 0. Disagreement at the ~1e-16 level is a
-floating-point artefact and affects no conclusion in the paper. Anything larger is a real
-difference, and `verify` fails.
+then reports `close` instead and still exits 0. On NumPy 2.x the observed disagreement is at
+most 5e-14 in absolute terms, on gain values ranging up to about 100 — relative agreement
+near machine precision, which affects no conclusion in the paper. `verify` fails on anything
+larger than 1e-10.
 
 NumPy 1.17 is a hard floor rather than a formality: below it `default_rng` does not exist, and
 the legacy `RandomState` API draws entirely different numbers.

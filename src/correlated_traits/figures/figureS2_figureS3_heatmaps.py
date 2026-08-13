@@ -13,7 +13,7 @@ Note the file naming, which is a known trap: the file whose name begins ``S2``
 is Scenario 3, and the one beginning ``S3`` is Scenario 4. The names follow the
 figure numbers in the manuscript, not the scenario numbers.
 
-Runtime is comparable to Figures 3 and 4, roughly 30-60 minutes on one core.
+Runtime is comparable to Figures 3 and 4, about 50 seconds on one core.
 
 IMPORTANT -- as with Figures 3 and 4, both figures come from a single random
 generator in a fixed order (S2 panel A, S2 panel B, S3 panel A, S3 panel B).

@@ -7,8 +7,8 @@ Each figure has two panels: panel A fixes the genetic correlation at 0.9 and
 sweeps the environmental correlation; panel B fixes the environmental
 correlation at 0.9 and sweeps the genetic correlation.
 
-Runtime is roughly 30-60 minutes on one core: 4 panels x 30 replicates x 189
-grid cells, each cell simulating 20,000 individuals.
+Runtime is about 50 seconds on one core: 4 panels x 30 replicates x 189 grid
+cells, each cell simulating 20,000 individuals.
 
 IMPORTANT -- do not split this module. Both figures are generated from a single
 random generator, in the order Figure 3 panel A, Figure 3 panel B, Figure 4

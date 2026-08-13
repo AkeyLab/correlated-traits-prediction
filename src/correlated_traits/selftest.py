@@ -21,8 +21,7 @@ which nothing else here would notice.
 It lives in the package, and is exposed as ``correlated-traits test``, so that it runs
 from an installed copy with no pytest and no source checkout. For a user the useful
 framing is not the refactor history but the consequence: it is a one-second check that
-their install is complete and their NumPy build produces the expected random stream,
-worth running before committing to an hour-long job.
+their install is complete and their NumPy build produces the expected random stream.
 """
 
 from __future__ import annotations
