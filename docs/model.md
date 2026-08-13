@@ -78,7 +78,7 @@ R²_base  = r²_tB
 R²_gain  = (R²_joint − R²_base) / R²_base
 ```
 
-`scripts/replicate_figure3A_column.py` checks this closed form against an explicit
+`correlated-traits replicate-column` checks this closed form against an explicit
 least-squares fit; they agree to about 1e-14.
 
 ## Scenarios
