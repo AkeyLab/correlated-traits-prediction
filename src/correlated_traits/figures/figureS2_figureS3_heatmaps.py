@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Figures S2 and S3 -- the same heatmaps under a STRONG baseline.
 
     Figure S2   Scenario 3: weakly  heritable target (h2_t = 0.1), alpha = 0.9
@@ -29,18 +28,13 @@ Outputs (under results/):
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from correlated_traits import (  # noqa: E402
+from correlated_traits import (
     H2_HELPER_GRID, HEATMAP_SEED, RHO_GRID, SimulationConfig, paths,
 )
-from correlated_traits.plotting import draw_heatmap_pair  # noqa: E402
-from correlated_traits.simulate import heatmap_panel  # noqa: E402
+from correlated_traits.plotting import draw_heatmap_pair
+from correlated_traits.simulate import heatmap_panel
 
 ALPHA_STRONG_BASELINE = 0.9
 
@@ -72,7 +66,3 @@ def main() -> None:
             paths.FIGURES / ("%s.png" % stem),
         )
         print("    figure -> %s\n" % figure_path.name)
-
-
-if __name__ == "__main__":
-    main()

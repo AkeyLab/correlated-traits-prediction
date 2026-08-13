@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Independent replication of the whole of Figure 3 panel A, with error bars.
 
 Same purpose as ``replicate_figure3A_column.py`` but over the full grid: 21
@@ -21,17 +20,12 @@ Output:  tables/replication_fig3A_panel.npz
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from correlated_traits import (  # noqa: E402
+from correlated_traits import (
     H2_HELPER_GRID, REPLICATION_SEED, RHO_GRID, SimulationConfig, paths,
 )
-from correlated_traits.simulate import (  # noqa: E402
+from correlated_traits.simulate import (
     draw_basis, draw_genotypes, relative_gain,
 )
 
@@ -75,7 +69,3 @@ def main() -> None:
     print("Replication mean gain range: %.4f to %.4f" % (mean.min(), mean.max()))
     print("Per-cell standard error range: %.5f to %.5f"
           % (standard_error.min(), standard_error.max()))
-
-
-if __name__ == "__main__":
-    main()

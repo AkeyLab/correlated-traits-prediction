@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Figure 2 -- simulation validates the three-term decomposition.
 
 Equation 12 says the relative gain factorises into three independent
@@ -24,16 +23,11 @@ Output:  figures/Fig2_validation.png
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from correlated_traits import VALIDATION_SEED, paths  # noqa: E402
-from correlated_traits.plotting import plt  # noqa: E402
-from correlated_traits.theory import gain_from_decomposition, joint_r2  # noqa: E402
+from correlated_traits import VALIDATION_SEED, paths
+from correlated_traits.plotting import plt
+from correlated_traits.theory import gain_from_decomposition, joint_r2
 
 N_INDIVIDUALS = 2000
 N_REPLICATES = 150
@@ -129,7 +123,3 @@ def main() -> None:
     fig.savefig(output, dpi=200, bbox_inches="tight")
     plt.close(fig)
     print("figure -> %s" % output.name)
-
-
-if __name__ == "__main__":
-    main()

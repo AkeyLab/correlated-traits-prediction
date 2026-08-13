@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Figure S1 -- the closed form plotted against simulation.
 
 Every simulated cell of Figure 3 panel A is plotted against the value the
@@ -15,8 +14,8 @@ with the size of the gain it is smoothed by regressing the replication standard
 errors on the theoretical value.
 
 Prerequisites -- run these first:
-    scripts/figure3_figure4_heatmaps.py     produces the simulated values
-    scripts/replicate_figure3A_panel.py     produces the standard errors
+    correlated-traits figure3-4         produces the simulated values
+    correlated-traits replicate-panel   produces the standard errors
 
 Runtime: seconds.
 Output:  figures/FigureS1_theory_vs_simulation.{pdf,png}
@@ -24,16 +23,11 @@ Output:  figures/FigureS1_theory_vs_simulation.{pdf,png}
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from correlated_traits import H2_HELPER_GRID, RHO_GRID, paths  # noqa: E402
-from correlated_traits.plotting import plt  # noqa: E402
-from correlated_traits.theory import gain_closed_form  # noqa: E402
+from correlated_traits import H2_HELPER_GRID, RHO_GRID, paths
+from correlated_traits.plotting import plt
+from correlated_traits.theory import gain_closed_form
 
 H2_TARGET = 0.9
 RHO_G = 0.9
@@ -111,9 +105,9 @@ def main() -> None:
     paths.ensure_output_dirs()
 
     simulated_panel = np.load(require(
-        paths.ARRAYS / SIMULATED_ARRAY, "scripts/figure3_figure4_heatmaps.py"))
+        paths.ARRAYS / SIMULATED_ARRAY, "correlated-traits figure3-4"))
     standard_error_panel = np.load(require(
-        paths.TABLES / REPLICATION_NPZ, "scripts/replicate_figure3A_panel.py"))["se"]
+        paths.TABLES / REPLICATION_NPZ, "correlated-traits replicate-panel"))["se"]
 
     expected_shape = (len(RHO_GRID), len(H2_HELPER_GRID))
     if simulated_panel.shape != expected_shape or standard_error_panel.shape != expected_shape:
@@ -148,7 +142,3 @@ def main() -> None:
     for tag, (r_squared, slope, intercept, slope_se) in statistics.items():
         print("  panel %s: R^2 = %.6f, slope = %.5f +/- %.5f, intercept = %+.5f"
               % (tag, r_squared, slope, slope_se, intercept))
-
-
-if __name__ == "__main__":
-    main()

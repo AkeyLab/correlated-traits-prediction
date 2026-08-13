@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Independent replication of one column of Figure 3 panel A.
 
 The published heatmaps average 30 replicates per cell but report no
@@ -30,18 +29,13 @@ Output:  tables/replication_fig3A_column_hh2_0.6.csv
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from correlated_traits import REPLICATION_SEED, SimulationConfig, paths  # noqa: E402
-from correlated_traits.simulate import (  # noqa: E402
+from correlated_traits import REPLICATION_SEED, SimulationConfig, paths
+from correlated_traits.simulate import (
     draw_basis, draw_genotypes, pearson, simulate_cell,
 )
-from correlated_traits.theory import gain_closed_form, joint_r2  # noqa: E402
+from correlated_traits.theory import gain_closed_form, joint_r2
 
 H2_TARGET = 0.9
 RHO_G = 0.9
@@ -137,7 +131,3 @@ def main() -> None:
                          % (rho_e, predicted[i], observed[i],
                             standard_error[i], z_scores[i]))
     print("\nWrote %s" % output)
-
-
-if __name__ == "__main__":
-    main()
