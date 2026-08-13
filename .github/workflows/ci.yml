@@ -1,8 +1,7 @@
 name: CI
 
-# Installs the package from source then runs the fast checks. The long
-# simulations (figures 3, 4, S2, S3) are hours of CPU and are deliberately not
-# run here
+# Installs the package from source, then regenerates every figure and checks the
+# arrays against the published ones. The whole suite takes about two minutes
 
 on:
   push:
@@ -20,6 +19,7 @@ concurrency:
 jobs:
   install-and-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v7
@@ -39,8 +39,12 @@ jobs:
         working-directory: ${{ runner.temp }} #Run in a temp dir
         run: correlated-traits test
 
-      - name: Quick figure
+      - name: Regenerate every figure and verify against the published arrays
         working-directory: ${{ runner.temp }} #Run in a temp dir
-        run: |
-          correlated-traits quick --results-dir "${{ runner.temp }}/ct-results"
-          test -s "${{ runner.temp }}/ct-results/figures/Fig2_validation.png"
+        run: correlated-traits figures --results-dir "${{ runner.temp }}/ct-results"
+
+      - name: Upload figures
+        uses: actions/upload-artifact@v7
+        with:
+          name: figures
+          path: ${{ runner.temp }}/ct-results/figures/

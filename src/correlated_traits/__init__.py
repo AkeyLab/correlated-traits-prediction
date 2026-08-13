@@ -1,10 +1,19 @@
 """Theory and simulation code for the correlated-traits prediction framework.
 
+This package exists to reproduce the manuscript's figures. That is why the
+per-figure modules, the ``correlated-traits`` command and the published
+reference arrays all live inside it rather than beside it: one install, from
+GitHub and without a clone, gives you everything needed to regenerate the
+results and check them against what was published.
+
 Package layout
     ``theory``    closed-form expressions for the relative predictive gain
     ``simulate``  the two-trait simulation model and the heatmap panel driver
     ``plotting``  shared figure style
-    ``paths``     where outputs are written
+    ``paths``     where outputs are written, and the packaged reference arrays
+    ``figures``   one module per published figure, each exposing ``main()``
+    ``cli``       the command that drives them
+    ``selftest``  the checks behind ``correlated-traits test``
 
 The manuscript's parameter grids are exported here because four figures and
 three verification scripts all have to agree on them.

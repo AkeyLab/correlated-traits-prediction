@@ -67,6 +67,10 @@ This analysis ships as a Python package, `correlated_traits`, which installs one
 command-line program: **`correlated-traits`**. Each subcommand regenerates one piece of the
 paper such as `correlated-traits figure2` writes Figure 2.
 
+The package exists to reproduce the published results, which is why the per-figure code and
+the published reference arrays live inside it: one install gives you everything needed to
+regenerate the figures and check them against what was published.
+
 > **Note — pre-merge URLs.** The commands below install from the `repackage` branch, because
 > that is where the packaged CLI currently lives. Once it is merged, drop the `@repackage`
 > suffix from every URL on this page so they track the default branch.
@@ -192,8 +196,9 @@ correlated-traits verify
 ```
 
 Every array is reported as `identical`, `close`, or `DIFFERS`. Exit status is 0 when all of
-them match to at least floating-point tolerance and 1 otherwise, so this works in CI.
-`correlated-traits figures` ends by running it.
+them match to at least floating-point tolerance and 1 otherwise. `correlated-traits figures`
+ends by running it, and CI runs `correlated-traits figures` on every push — the full suite
+takes about two minutes on one core, so this is checked continuously rather than occasionally.
 
 **2. A two-second check that your install is sound.** Worth running first:
 
