@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Figures S2 and S3 -- the same heatmaps under a STRONG baseline.
+"""Figures S1 and S2 -- the same heatmaps under a STRONG baseline.
 
-    Figure S3   Scenario 3: weakly  heritable target (h2_t = 0.1), alpha = 0.9
-    Figure S2   Scenario 4: highly heritable target (h2_t = 0.9), alpha = 0.9
+    Figure S2   Scenario 3: weakly  heritable target (h2_t = 0.1), alpha = 0.9
+    Figure S1   Scenario 4: highly heritable target (h2_t = 0.9), alpha = 0.9
 
 The only change from Figures 3 and 4 is ``alpha``: the baseline predictor now
 captures 90% of the target heritability instead of 10%. These two figures are
@@ -11,15 +11,16 @@ heritable target even when the baseline is already strong, but stop paying off
 for a highly heritable one.
 
 Note the file naming, which is a known trap: the stems follow the SCENARIO
-numbering, not the manuscript's figure numbers, and the two are off by one.
-``S2_scenario3_*`` prints in the paper as Figure S3; ``S3_scenario4_*`` prints
-as Figure S2. The manuscript numbers supplementary figures by order of
-appearance in Additional file 1, where the Scenario 4 panel comes first.
+numbering, not the manuscript's figure numbers, and the two disagree.
+``S2_scenario3_*`` prints in the paper as Figure S2; ``S3_scenario4_*`` prints
+as Figure S1. The manuscript numbers supplementary figures by order of
+appearance in File S1, where the Scenario 4 panel comes first.
 
 Runtime is comparable to Figures 3 and 4, roughly 30-60 minutes on one core.
 
 IMPORTANT -- as with Figures 3 and 4, both figures come from a single random
-generator in a fixed order (S2 panel A, S2 panel B, S3 panel A, S3 panel B).
+generator in a fixed order (scenario 3 panel A, scenario 3 panel B, scenario 4
+panel A, scenario 4 panel B).
 Do not split or reorder them.
 
 Outputs (under results/):
@@ -48,7 +49,7 @@ ALPHA_STRONG_BASELINE = 0.9
 
 FIGURES = [
     ("S2_scenario3_lowh_goodbase", 0.1, "Figure S2  Scenario 3: weakly heritable target"),
-    ("S3_scenario4_highh_goodbase", 0.9, "Figure S3  Scenario 4: highly heritable target"),
+    ("S3_scenario4_highh_goodbase", 0.9, "Figure S1  Scenario 4: highly heritable target"),
 ]
 
 

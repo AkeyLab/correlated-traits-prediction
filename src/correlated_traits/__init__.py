@@ -25,13 +25,13 @@ RHO_GRID = np.linspace(-1, 1, 21)
 #: Helper-heritability axis of every heatmap: 9 values from 0.1 to 0.9.
 H2_HELPER_GRID = np.round(np.linspace(0.1, 0.9, 9), 2)
 
-#: Seed used for the published heatmap figures (3, 4, S2, S3).
+#: Seed used for the published heatmap figures (3, 4, S1, S2).
 HEATMAP_SEED = 20260717
 
 #: Seed used for the published theory-validation figure (2).
 VALIDATION_SEED = 42
 
-#: Seed used for the independent replications behind Figure S1. Chosen to differ
+#: Seed used for the independent replications behind Figure 2D-F. Chosen to differ
 #: from HEATMAP_SEED on purpose: these are independent replications, not
 #: bit-for-bit reproductions.
 REPLICATION_SEED = 20260803

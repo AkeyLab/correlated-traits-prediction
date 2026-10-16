@@ -26,7 +26,7 @@ _PANEL_SPEC = [
 
 
 def draw_heatmap_pair(panel_a, panel_b, rho_grid, h2_h_grid, output_path):
-    """Render the two-panel heatmap used for Figures 3, 4, S2 and S3.
+    """Render the two-panel heatmap used for Figures 3, 4, S1 and S2.
 
     Both panels share one colour scale, because the point of the pair is to
     compare them. Note that different *figures* must not share a scale -- the

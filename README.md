@@ -34,7 +34,7 @@ R²_gain  =   ──────────────────────
 
 Both forms live in [`src/correlated_traits/theory.py`](src/correlated_traits/theory.py).
 The second is derived in Supplementary Methods 2 of the paper and validated against
-simulation in Figure S1, where it recovers the simulated values with R² > 0.999.
+simulation in Figure 2D–F, where it recovers the simulated values with R² ≥ 0.998.
 
 The counter-intuitive consequence, and the reason the paper exists: two helper traits with
 *identical* phenotypic correlation to the target can deliver completely different gains. When
@@ -49,8 +49,8 @@ to help you build intuition.
 
 ## Scope — read this before you look for something that is not here
 
-This repository covers the **theoretical and simulation** results: Figures 2, 3, 4, S1, S2
-and S3, plus the derivation checks.
+This repository covers the **theoretical and simulation** results: Figures 2, 3, 4, S1 and
+S2, plus the derivation checks.
 
 It does **not** contain the UK Biobank type 2 diabetes analysis (Figure 5, and the
 AUC-ROC values 0.677 / 0.907 / 0.889 quoted in the abstract). That analysis runs on the UK
@@ -79,13 +79,7 @@ the package from elsewhere, `pip install -e .`
 
 ## Quick start
 
-Reproduce the cheapest figure, which takes a few seconds and exercises the whole theory path:
-
-```bash
-python scripts/figure2_theory_validation.py
-```
-
-Then confirm the package still matches the original implementation bit-for-bit:
+Confirm the package still matches the original implementation bit-for-bit (a few seconds):
 
 ```bash
 python tests/test_equivalence.py
@@ -96,8 +90,15 @@ must regenerate the arrays and compare them against `reference/arrays/`:
 
 ```bash
 python scripts/figure3_figure4_heatmaps.py     # ~25 min
-python scripts/figureS2_figureS3_heatmaps.py   # ~25 min
+python scripts/figureS1_figureS2_heatmaps.py   # ~25 min
 python scripts/verify_reproducibility.py
+```
+
+Figure 2 then needs the replications behind its panels D–F:
+
+```bash
+python scripts/replicate_figure3A_figure4A_panels.py   # ~40 min
+python scripts/figure2_theory_validation.py            # ~10 s
 ```
 
 Everything is written to `results/` (git-ignored). Set `CORRELATED_TRAITS_RESULTS` to
@@ -109,10 +110,9 @@ redirect output elsewhere.
 
 | Figure | Script | What it shows | Runtime |
 |---|---|---|---|
-| **2** | `scripts/figure2_theory_validation.py` | Simulation matches the three-term decomposition, varying one determinant per panel | ~10 s |
+| **2** | `scripts/figure2_theory_validation.py` | A–C: simulation matches the three-term decomposition, varying one determinant per panel. D–F: closed form against simulation for the Figure 3A and 4A designs, with Monte Carlo error bands | ~10 s |
 | **3, 4** | `scripts/figure3_figure4_heatmaps.py` | Predictive gain across ρ and helper heritability, **poor** baseline (α = 0.1) | ~25 min |
-| **S2, S3** | `scripts/figureS2_figureS3_heatmaps.py` | The same, **strong** baseline (α = 0.9) | ~25 min |
-| **S1** | `scripts/figureS1_theory_vs_simulation.py` | Closed form against simulation, with Monte Carlo error bands | ~5 s |
+| **S1, S2** | `scripts/figureS1_figureS2_heatmaps.py` | The same, **strong** baseline (α = 0.9) | ~25 min |
 
 Two supporting scripts quantify uncertainty, since the published heatmaps report averages
 without error bars:
@@ -120,14 +120,14 @@ without error bars:
 | Script | Purpose | Runtime |
 |---|---|---|
 | `scripts/replicate_figure3A_column.py` | Re-runs one column with a different seed; gives per-cell standard errors and z-scores, and checks the closed-form R² identity against an explicit least-squares fit | ~2 min |
-| `scripts/replicate_figure3A_panel.py` | The same over the full grid; produces the standard errors Figure S1 plots | ~20 min |
+| `scripts/replicate_figure3A_figure4A_panels.py` | The same over the full grids of Figures 3A and 4A; produces the standard errors Figure 2D–F plots | ~40 min |
 
-Dependency order — Figure S1 needs both of these first:
+Dependency order — Figure 2 panels D–F need both of these first:
 
 ```
-figure3_figure4_heatmaps.py ─┐
-                             ├─→ figureS1_theory_vs_simulation.py
-replicate_figure3A_panel.py ─┘
+figure3_figure4_heatmaps.py ──────────────┐
+                                          ├─→ figure2_theory_validation.py
+replicate_figure3A_figure4A_panels.py ────┘
 ```
 
 `make figures` runs everything in the correct order; `make quick` runs only the fast targets.
@@ -179,7 +179,7 @@ B = √α · standardize(G_t)  +  √(1−α) · η
 ```
 
 so `R²_base = α h²_t` in expectation. This makes α a clean dial for baseline quality: **0.1**
-is the poor baseline of Figures 3 and 4, **0.9** the strong baseline of Figures S2 and S3.
+is the poor baseline of Figures 3 and 4, **0.9** the strong baseline of Figures S1 and S2.
 
 Full detail in [`docs/model.md`](docs/model.md).
 
@@ -221,7 +221,7 @@ the closed form with a mean signed deviation of +0.1% across the column, and the
 R² identity agrees with an explicit least-squares fit to ~1e-14.
 
 **One caveat that matters.** `figure3_figure4_heatmaps.py` generates *both* figures from a
-single random generator, in a fixed panel order, and `figureS2_figureS3_heatmaps.py` does the
+single random generator, in a fixed panel order, and `figureS1_figureS2_heatmaps.py` does the
 same for its pair. Splitting either script, or reordering its panels, changes which random
 numbers each panel receives — the results stay statistically valid but no longer match the
 published arrays bit-for-bit. Each script says so at the top.

@@ -33,7 +33,7 @@ Baseline predictor
 
     which gives ``R2_base = alpha * h2_t`` in expectation. ``alpha`` is therefore
     a dial for baseline quality: 0.1 is the poor baseline of Figures 3 and 4, and
-    0.9 the strong baseline of Figures S2 and S3.
+    0.9 the strong baseline of Figures S1 and S2.
 
 Reproducibility
     Every function takes an explicit ``numpy.random.Generator``. Results are
@@ -57,7 +57,7 @@ __all__ = ["SimulationConfig", "pearson", "draw_basis", "draw_genotypes", "simul
 
 @dataclass(frozen=True)
 class SimulationConfig:
-    """Fixed design shared by the heatmap figures (Figures 3, 4, S2, S3)."""
+    """Fixed design shared by the heatmap figures (Figures 3, 4, S1, S2)."""
 
     n_individuals: int = 20_000
     m_shared: int = 100

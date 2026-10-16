@@ -61,7 +61,7 @@ def gain_from_decomposition(r2_base, r_th, redundancy):
 def gain_closed_form(h2_t, h2_h, rho_g, rho_e, r2_base):
     """Relative gain in terms of heritabilities and correlations.
 
-    This is the expression validated against simulation in Figure S1.
+    This is the expression validated against simulation in Figure 2D-F.
     """
     numerator = (rho_g * np.sqrt(h2_h / h2_t) * (h2_t - r2_base)
                  + rho_e * np.sqrt((1.0 - h2_t) * (1.0 - h2_h))) ** 2

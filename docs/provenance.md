@@ -11,12 +11,11 @@ behind, so that nothing looks like it appeared from nowhere.
 | `src/correlated_traits/simulate.py` | The simulation body shared by `regenerate_fig34_methods.py` and `regenerate_S2S3_methods.py` |
 | `src/correlated_traits/theory.py` | The closed forms duplicated across four scripts |
 | `src/correlated_traits/plotting.py` | `replot_fig34.py`, which produced the published heatmap styling |
-| `scripts/figure2_theory_validation.py` | `regenerate_fig2_validation.py` |
+| `scripts/figure2_theory_validation.py` | `regenerate_fig2_validation.py` (panels A–C) and `make_fig_theory_vs_sim.py` (panels D–F, formerly Figure S1) |
 | `scripts/figure3_figure4_heatmaps.py` | `regenerate_fig34_methods.py` |
-| `scripts/figureS2_figureS3_heatmaps.py` | `regenerate_S2S3_methods.py` |
-| `scripts/figureS1_theory_vs_simulation.py` | `make_fig_theory_vs_sim.py` |
+| `scripts/figureS1_figureS2_heatmaps.py` | `regenerate_S2S3_methods.py` |
 | `scripts/replicate_figure3A_column.py` | `replicate_fig3A_column.py` |
-| `scripts/replicate_figure3A_panel.py` | `replicate_fig3A_panel.py` |
+| `scripts/replicate_figure3A_figure4A_panels.py` | `replicate_fig3A_panel.py`, extended to also replicate the Figure 4A design |
 | `reference/arrays/*.npy` | `fig34_methods_out/*.npy`, the arrays the published figures were drawn from |
 
 ## What changed
@@ -33,7 +32,7 @@ Nothing that affects a number. The changes are structural:
    explicitly, so the random stream is visible rather than implicit.
 5. **Names spelled out.** `gain_cell` → `relative_gain`, `ols_r2` →
    `ordinary_least_squares_r2`, `H_T2` → `h2_t`, and so on.
-6. **Prerequisites checked.** Figure S1 previously failed with a bare `FileNotFoundError` if
+6. **Prerequisites checked.** The closed-form check (now Figure 2D–F) previously failed with a bare `FileNotFoundError` if
    run out of order; it now names the script you need to run first.
 
 ### Verification that the numbers did not move
@@ -59,11 +58,11 @@ Specifically not included, and why:
 | Left out | Reason |
 |---|---|
 | `20230*`–`20260*` exploratory notebooks | Superseded working notebooks. Earlier simulation schemes, abandoned parameterizations, and figure drafts that did not reach the paper. |
-| `simulation_class.py`, `simulation_class_sort_h2.py` and the `sim2_*`, `sim_part*` families | An earlier simulation framework. The published Figures 3, 4, S2 and S3 were regenerated from the Methods-faithful code, deliberately replacing this variant-selection approach. |
+| `simulation_class.py`, `simulation_class_sort_h2.py` and the `sim2_*`, `sim_part*` families | An earlier simulation framework. The published Figures 3, 4, S1 and S2 were regenerated from the Methods-faithful code, deliberately replacing this variant-selection approach. |
 | `run_twoModels*.py`, `sim_all_parameters.py` | Meta-modelling that predicts the simulated gain from its own input parameters. This produced an XGBoost figure that is **not** in the current manuscript. |
 | `optuna_gb.py`, `example_optuna.py` | Hyperparameter search experiments, not used in the paper. |
-| `make_combined_pdf.py`, `plot_appendix2_scatter.py` | One-off assembly scripts for a specific internal review document. `plot_appendix2_scatter.py` largely duplicated the Figure S1 script. |
-| `verify_appendix2_fig3A.py` | An earlier version of the Figure S1 check, superseded by the two replication scripts, which quantify uncertainty rather than only comparing point values. |
+| `make_combined_pdf.py`, `plot_appendix2_scatter.py` | One-off assembly scripts for a specific internal review document. `plot_appendix2_scatter.py` largely duplicated the closed-form check now in Figure 2D–F. |
+| `verify_appendix2_fig3A.py` | An earlier version of the closed-form check (now Figure 2D–F), superseded by the two replication scripts, which quantify uncertainty rather than only comparing point values. |
 | `correlated_traits_venv/` | A checked-in virtual environment. Replaced by `requirements.txt`. |
 | Everything under the UK Biobank analysis | Controlled-access data. See [`uk_biobank_analysis.md`](uk_biobank_analysis.md). |
 

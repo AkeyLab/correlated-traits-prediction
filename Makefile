@@ -9,35 +9,33 @@ RESULTS ?= results
 .PHONY: help quick figures heatmaps replications test clean
 
 help:
-	@echo "make quick        Figure 2 and the test suite          (~30 seconds)"
+	@echo "make quick        The test suite                       (~10 seconds)"
 	@echo "make figures      Every figure, in dependency order    (~1 hour)"
-	@echo "make heatmaps     Figures 3, 4, S2, S3 only            (~50 minutes)"
-	@echo "make replications Uncertainty estimates for Figure S1  (~22 minutes)"
+	@echo "make heatmaps     Figures 3, 4, S1, S2 only            (~50 minutes)"
+	@echo "make replications Uncertainty estimates for Figure 2D-F (~40 minutes)"
 	@echo "make test         Bit-for-bit regression test          (~10 seconds)"
 	@echo "make verify       Compare output against reference/    (~1 second)"
 	@echo "make clean        Delete everything under $(RESULTS)/"
 
 quick: test
-	$(PYTHON) $(SCRIPTS)/figure2_theory_validation.py
 
 test:
 	$(PYTHON) tests/test_equivalence.py
 
 heatmaps:
 	$(PYTHON) $(SCRIPTS)/figure3_figure4_heatmaps.py
-	$(PYTHON) $(SCRIPTS)/figureS2_figureS3_heatmaps.py
+	$(PYTHON) $(SCRIPTS)/figureS1_figureS2_heatmaps.py
 
 replications:
 	$(PYTHON) $(SCRIPTS)/replicate_figure3A_column.py
-	$(PYTHON) $(SCRIPTS)/replicate_figure3A_panel.py
+	$(PYTHON) $(SCRIPTS)/replicate_figure3A_figure4A_panels.py
 
-# Figure S1 needs the simulated values (heatmaps) and the standard errors
-# (replications), so it must come last.
+# Figure 2 panels D-F need the simulated values (heatmaps) and the standard
+# errors (replications), so Figure 2 must come last.
 figures: test
-	$(PYTHON) $(SCRIPTS)/figure2_theory_validation.py
 	$(MAKE) heatmaps PYTHON=$(PYTHON)
 	$(MAKE) replications PYTHON=$(PYTHON)
-	$(PYTHON) $(SCRIPTS)/figureS1_theory_vs_simulation.py
+	$(PYTHON) $(SCRIPTS)/figure2_theory_validation.py
 	$(PYTHON) $(SCRIPTS)/verify_reproducibility.py
 
 verify:

@@ -37,10 +37,10 @@ EXPECTED = {
     "Fig3_scenario1_highh_B.npy": "figure3_figure4_heatmaps.py",
     "Fig4_scenario2_lowh_A.npy": "figure3_figure4_heatmaps.py",
     "Fig4_scenario2_lowh_B.npy": "figure3_figure4_heatmaps.py",
-    "S2_scenario3_lowh_goodbase_A.npy": "figureS2_figureS3_heatmaps.py",
-    "S2_scenario3_lowh_goodbase_B.npy": "figureS2_figureS3_heatmaps.py",
-    "S3_scenario4_highh_goodbase_A.npy": "figureS2_figureS3_heatmaps.py",
-    "S3_scenario4_highh_goodbase_B.npy": "figureS2_figureS3_heatmaps.py",
+    "S2_scenario3_lowh_goodbase_A.npy": "figureS1_figureS2_heatmaps.py",
+    "S2_scenario3_lowh_goodbase_B.npy": "figureS1_figureS2_heatmaps.py",
+    "S3_scenario4_highh_goodbase_A.npy": "figureS1_figureS2_heatmaps.py",
+    "S3_scenario4_highh_goodbase_B.npy": "figureS1_figureS2_heatmaps.py",
 }
 
 TOLERANCE = 1e-10

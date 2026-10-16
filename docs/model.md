@@ -16,7 +16,7 @@ Notation follows the Methods section of the paper.
 
 ## Design constants
 
-Set in `SimulationConfig`, and identical across Figures 3, 4, S2 and S3.
+Set in `SimulationConfig`, and identical across Figures 3, 4, S1 and S2.
 
 | Parameter | Value |
 |---|---|
@@ -87,20 +87,20 @@ least-squares fit; they agree to about 1e-14.
 |---|---|---|---|---|
 | 3 | 1 | 0.9 | 0.1 | Highly heritable target, poor baseline |
 | 4 | 2 | 0.1 | 0.1 | Weakly heritable target, poor baseline |
-| S3 | 3 | 0.1 | 0.9 | Weakly heritable target, strong baseline |
-| S2 | 4 | 0.9 | 0.9 | Highly heritable target, strong baseline |
+| S2 | 3 | 0.1 | 0.9 | Weakly heritable target, strong baseline |
+| S1 | 4 | 0.9 | 0.9 | Highly heritable target, strong baseline |
 
-**Watch the file names — they are off by one against the manuscript.** The file stems follow
+**Watch the file names — they do not match the manuscript.** The file stems follow
 the *scenario* numbering, not the manuscript's figure numbers, and the two disagree:
 
 | File stem | Scenario | Prints in the paper as |
 |---|---|---|
-| `S2_scenario3_lowh_goodbase` | 3, weakly heritable target | **Figure S3** |
-| `S3_scenario4_highh_goodbase` | 4, highly heritable target | **Figure S2** |
+| `S2_scenario3_lowh_goodbase` | 3, weakly heritable target | **Figure S2** |
+| `S3_scenario4_highh_goodbase` | 4, highly heritable target | **Figure S1** |
 
-The manuscript numbers its supplementary figures by order of appearance in Additional file 1,
-where the Scenario 4 panel comes first. So reproducing "Figure S2" from this repository means
-running the `S3_*` outputs, and vice versa. This has caused confusion before, including in an
+The manuscript numbers its supplementary figures by order of appearance in File S1, where
+the Scenario 4 panel comes first. So reproducing "Figure S1" from this repository means
+running the `S3_*` outputs, and "Figure S2" the `S2_*` outputs. This has caused confusion before, including in an
 earlier version of this file, which asserted the rule the wrong way round.
 
 ## Known limitations
