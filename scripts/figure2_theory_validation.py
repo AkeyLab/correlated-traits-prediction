@@ -52,7 +52,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from correlated_traits import H2_HELPER_GRID, RHO_GRID, VALIDATION_SEED, paths  # noqa: E402
-from correlated_traits.plotting import plt  # noqa: E402
+from correlated_traits.style import BLUE, GREEN, ORANGE, panel_letter, plt, save  # noqa: E402
 from correlated_traits.theory import (  # noqa: E402
     gain_closed_form, gain_from_decomposition, joint_r2,
 )
@@ -60,9 +60,6 @@ from correlated_traits.theory import (  # noqa: E402
 N_INDIVIDUALS = 2000
 N_REPLICATES = 150
 
-LABEL_SIZE = 22
-TICK_SIZE = 16
-LETTER_SIZE = 34
 
 
 # ----------------------------------------------------------------- top row
@@ -117,26 +114,23 @@ def draw_decomposition_panel(ax, xs, gains, theoretical, colour, xlabel, letter,
     mean = np.array([np.mean(g) for g in gains])
     lower = np.array([np.percentile(g, 2.5) for g in gains])
     upper = np.array([np.percentile(g, 97.5) for g in gains])
-    ax.fill_between(xs, lower, upper, color=colour, alpha=0.25)
-    ax.plot(xs, theoretical, "k--", lw=2, label="Theory")
-    ax.plot(xs, mean, color=colour, lw=2.2, label="Simulation")
-    ax.set_xlabel(xlabel, fontsize=LABEL_SIZE)
-    ax.set_ylabel(r"$R^2_{\mathrm{gain}}$", fontsize=LABEL_SIZE)
-    ax.tick_params(labelsize=TICK_SIZE)
-    ax.grid(True, alpha=0.35)
-    ax.legend(fontsize=17, loc=legend_loc, framealpha=0.95)
-    ax.text(-0.17, 1.06, letter, transform=ax.transAxes, fontsize=LETTER_SIZE,
-            va="top", ha="left")
+    ax.fill_between(xs, lower, upper, color=colour, alpha=0.2, lw=0)
+    ax.plot(xs, mean, color=colour, label="Simulation")
+    ax.plot(xs, theoretical, "k--", lw=1.6, label="Theory")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(r"$R^2_{\mathrm{gain}}$")
+    ax.legend(loc=legend_loc)
+    panel_letter(ax, letter)
     return mean
 
 
 #: (letter, x values, colour, x label, legend position, fixed parameters)
 DECOMPOSITION_PANELS = [
-    ("A", np.linspace(0.12, 0.38, 20), "#2ca02c", r"$R^2_{\mathrm{base}}$", "upper right",
+    ("A", np.linspace(0.12, 0.38, 20), BLUE, r"$R^2_{\mathrm{base}}$", "upper right",
      lambda x: (x, 0.30, 0.30)),
-    ("B", np.linspace(-0.40, 0.40, 25), "#ff9f1c", r"$r_{th}$", "upper center",
+    ("B", np.linspace(-0.40, 0.40, 25), ORANGE, r"$r_{th}$", "upper center",
      lambda x: (0.20, x, 0.30)),
-    ("C", np.linspace(0.05, 0.65, 20), "#e63946", r"$\mathcal{R}$", "upper right",
+    ("C", np.linspace(0.05, 0.65, 20), GREEN, r"$\mathcal{R}$", "upper right",
      lambda x: (0.20, 0.42, x)),
 ]
 
@@ -147,9 +141,9 @@ ALPHA = 0.1
 COLUMN_H2_HELPER = 0.6
 Z95 = 1.959964
 
-POINT_COLOUR = "#2b6cb0"
-FIT_COLOUR = "#c05621"
-BAND_COLOUR = "#6b8fb8"
+POINT_COLOUR = BLUE
+FIT_COLOUR = ORANGE
+BAND_COLOUR = BLUE
 
 
 def simple_regression(x, y):
@@ -171,33 +165,29 @@ def draw_closed_form_panel(ax, predicted, simulated, standard_error, title, lett
     se_fit, *_ = np.linalg.lstsq(se_design, standard_error, rcond=None)
     se_curve = np.clip(se_fit[0] + se_fit[1] * grid, 0.0, None)
     ax.fill_between(grid, grid - Z95 * se_curve, grid + Z95 * se_curve,
-                    color=BAND_COLOUR, alpha=0.30, lw=0, zorder=1,
+                    color=BAND_COLOUR, alpha=0.18, lw=0, zorder=1,
                     label="95% Monte Carlo band")
 
     slope, intercept, slope_se = simple_regression(predicted, simulated)
-    ax.plot(grid, intercept + slope * grid, color=FIT_COLOUR, lw=1.8, zorder=3,
+    ax.plot(grid, intercept + slope * grid, color=FIT_COLOUR, lw=1.6, zorder=3,
             label="Fit: slope %.3f $\\pm$ %.3f" % (slope, slope_se))
-    ax.plot([0, high], [0, high], ls=(0, (6, 5)), lw=1.6, color="0.25", zorder=3.5,
+    ax.plot([0, high], [0, high], "k--", lw=1.4, zorder=3.5,
             label="Identity, $y = x$")
-    ax.plot(predicted, simulated, "o", ms=point_size, mfc="white", mec=POINT_COLOUR,
-            mew=1.5, zorder=4, label="Simulated")
+    ax.plot(predicted, simulated, "o", ms=point_size, color=POINT_COLOUR, alpha=0.7,
+            mew=0, zorder=4, label="Simulated")
 
     r_squared = np.corrcoef(predicted, simulated)[0, 1] ** 2
     ax.text(0.05, 0.95, "$R^2$ = %.4f" % r_squared, transform=ax.transAxes,
-            va="top", ha="left", fontsize=16,
-            bbox=dict(boxstyle="round,pad=0.4", fc="white", ec="0.75", lw=0.8))
+            va="top", ha="left")
 
     ax.set_xlim(0, high)
     ax.set_ylim(0, high)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_xlabel(r"Theoretical $R^2_{\mathrm{gain}}$", fontsize=LABEL_SIZE)
-    ax.set_ylabel(r"Simulated $R^2_{\mathrm{gain}}$", fontsize=LABEL_SIZE)
-    ax.set_title(title, fontsize=17, pad=10)
-    ax.tick_params(labelsize=TICK_SIZE)
-    ax.grid(alpha=0.25, lw=0.6)
-    ax.legend(fontsize=13.5, loc="lower right", framealpha=0.95)
-    ax.text(-0.17, 1.06, letter, transform=ax.transAxes, fontsize=LETTER_SIZE,
-            va="top", ha="left")
+    ax.set_xlabel(r"Theoretical $R^2_{\mathrm{gain}}$")
+    ax.set_ylabel(r"Simulated $R^2_{\mathrm{gain}}$")
+    ax.set_title(title, pad=8)
+    ax.legend(loc="lower right")
+    panel_letter(ax, letter)
     return r_squared, slope, intercept, slope_se
 
 
@@ -232,9 +222,9 @@ def main() -> None:
     fig3a = load_design("Fig3_scenario1_highh_A.npy", "replication_fig3A_panel.npz", 0.9)
     fig4a = load_design("Fig4_scenario2_lowh_A.npy", "replication_fig4A_panel.npz", 0.1)
 
-    fig = plt.figure(figsize=(21, 14.2))
-    grid = fig.add_gridspec(2, 3, height_ratios=[1, 1.22], hspace=0.30, wspace=0.30,
-                            left=0.06, right=0.985, top=0.965, bottom=0.05)
+    fig = plt.figure(figsize=(15, 10.4))
+    grid = fig.add_gridspec(2, 3, height_ratios=[1, 1.22], hspace=0.38, wspace=0.34,
+                            left=0.07, right=0.985, top=0.955, bottom=0.06)
 
     rng = np.random.default_rng(VALIDATION_SEED)
     for column, (letter, xs, colour, xlabel, legend_loc, unpack) in enumerate(
@@ -247,12 +237,12 @@ def main() -> None:
 
     j = int(np.where(np.isclose(H2_HELPER_GRID, COLUMN_H2_HELPER))[0][0])
     closed_form_panels = [
-        ("D", [a[:, j] for a in fig3a], 7.5,
+        ("D", [a[:, j] for a in fig3a], 6.0,
          r"$h_t^2 = 0.9$,  $h_h^2 = 0.6$" "\n" r"$\rho_g = 0.9$,  $\rho_e \in [-1,\, 1]$"),
-        ("E", [a.ravel() for a in fig3a], 5.0,
+        ("E", [a.ravel() for a in fig3a], 4.0,
          r"$h_t^2 = 0.9$,  $h_h^2 \in [0.1,\, 0.9]$" "\n"
          r"$\rho_g = 0.9$,  $\rho_e \in [-1,\, 1]$"),
-        ("F", [a.ravel() for a in fig4a], 5.0,
+        ("F", [a.ravel() for a in fig4a], 4.0,
          r"$h_t^2 = 0.1$,  $h_h^2 \in [0.1,\, 0.9]$" "\n"
          r"$\rho_g = 0.9$,  $\rho_e \in [-1,\, 1]$"),
     ]
@@ -264,11 +254,7 @@ def main() -> None:
         print("panel %s  R^2 = %.6f, slope = %.5f +/- %.5f, intercept = %+.5f"
               % (letter, r_squared, slope, slope_se, intercept))
 
-    for extension in ("png", "pdf"):
-        output = paths.FIGURES / ("Fig2_validation.%s" % extension)
-        fig.savefig(output, dpi=200, bbox_inches="tight")
-        print("figure -> %s" % output.name)
-    plt.close(fig)
+    print("figure -> %s" % save(fig, paths.FIGURES / "Fig2_validation"))
 
 
 if __name__ == "__main__":
