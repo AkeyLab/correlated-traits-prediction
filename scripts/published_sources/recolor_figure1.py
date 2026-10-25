@@ -53,6 +53,23 @@ hsv0[..., 0][band] = t[0]; hsv0[..., 1][band] = t[1]
 Image.fromarray((np.concatenate([hsv_to_rgb(hsv0), im0[..., 3:]], 2) * 255).round().astype(np.uint8)).save(out + '_chrom.png')
 page.replace_image(xref0, filename=out + '_chrom.png')
 print('chromosome band pixels recoloured:', int(band.sum()))
+# panel letters: replace the Myriad Pro "A"/"B" with bold DejaVu Sans, the house panel-letter font
+import matplotlib, os
+bold = os.path.join(matplotlib.get_data_path(), 'fonts/ttf/DejaVuSans-Bold.ttf')
+letters = []
+for b in page.get_text('dict')['blocks']:
+    for l in b.get('lines', []):
+        for sp in l['spans']:
+            if sp['text'].strip() in ('A', 'B') and sp['size'] > 10:
+                letters.append((sp['text'].strip(), fitz.Rect(sp['bbox']), sp['origin']))
+assert sorted(x[0] for x in letters) == ['A', 'B'], letters
+for _, rect, _ in letters:
+    page.add_redact_annot(rect)
+page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE, graphics=fitz.PDF_REDACT_LINE_ART_NONE)
+SIZE = 12.5   # ~2.2% of the 576-pt figure width, as in the other figures
+for letter, rect, origin in letters:
+    page.insert_text((rect.x0, origin[1]), letter, fontsize=SIZE, fontname='DejaVuSansBold', fontfile=bold, color=(0, 0, 0))
+print('panel letters replaced:', [x[0] for x in letters])
 doc.save(out + '.pdf', garbage=3, deflate=True)
 pix = fitz.open(out + '.pdf')[0].get_pixmap(dpi=600, alpha=False)
 pix.save(out + '.png'); print('rendered', pix.width, pix.height)
