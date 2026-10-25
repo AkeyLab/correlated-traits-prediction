@@ -29,8 +29,7 @@ net = imread(S + '/fig5/network_house.png')
 ink = np.where((net[..., :3] < 0.98).any(2))
 ax.imshow(net[ink[0].min():ink[0].max() + 1, ink[1].min():ink[1].max() + 1])
 ax.set_axis_off()
-cell = ax.get_position()
-fig.text(cell.x0 - 0.03, cell.y1 + 0.005, 'A', fontsize=20, fontweight='bold', va='top', ha='left')
+ax_net = ax
 
 # B: pairwise-correlation counts per NMR trait
 ax = fig.add_subplot(gs[0, 1])
@@ -66,5 +65,12 @@ ax.set_xlabel('Number of added tag helper traits'); ax.set_ylabel('AUC-ROC')
 ax.grid(axis='y', color='0.88', ls='--', lw=0.8); ax.set_axisbelow(True)
 ax.legend(loc='lower left', bbox_to_anchor=(0.04, 0.02))
 panel_letter(ax, 'D')
+# panel A letter: same column as the C letter, same row as the B letter
+fig.canvas.draw()
+to_fig = fig.transFigure.inverted()
+ax_c, ax_b = fig.axes[2], fig.axes[1]
+x_a = to_fig.transform(ax_c.transAxes.transform((-0.42, 0)))[0]
+y_a = to_fig.transform(ax_b.transAxes.transform((0, 1.08)))[1]
+fig.text(x_a, y_a, 'A', fontsize=20, fontweight='bold', va='top', ha='left')
 print('annotations', {k: round(float(auc[k]), 3) for k in (1, 2, 3, 5, 10, 20, 30)}, 'base', round(base, 3), 'hba1c', round(hba1c, 3))
 print(save(fig, S + '/fig5/Figure5_house'))
