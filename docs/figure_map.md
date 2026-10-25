@@ -19,7 +19,7 @@ Which script produces which figure, what it needs first, and where the output la
 | S1 | Gain heatmaps, **highly** heritable target, strong baseline | `figureS1_figureS2_heatmaps.py` | `figures/S3_scenario4_highh_goodbase.png`<br>`arrays/S3_scenario4_highh_goodbase_{A,B}.npy` |
 | S2 | Gain heatmaps, **weakly** heritable target, strong baseline | `figureS1_figureS2_heatmaps.py` | `figures/S2_scenario3_lowh_goodbase.png`<br>`arrays/S2_scenario3_lowh_goodbase_{A,B}.npy` |
 | S3 | Phenotypic correlation vs predictive gain, weakly heritable target (Fig. 4 and S2 designs) | `figureS_phenotypic_correlation.py` | `figures/FigS_rho_p_h2t_0.1.png`<br>`tables/matched_pairs_h2t_0.1.csv` |
-| S4 | Multiple helper traits: closed form vs simulation (A); five equivalent helpers (B) | `figureS_multi_helper.py` | `figures/FigS_multi_helper.png`<br>`tables/multi_helper_validation.csv` |
+| S4 | Multiple helper traits: equation 15 vs simulation, 300 architectures (A); five equivalent helpers (B). Simulations by J.M.A. | `figureS_multi_helper.py` (draws `reference/multi_helper/*.csv`; an R version is in the same folder) | `figures/FigS_multi_helper.{png,pdf}` |
 | S5 | Tag helper trait correlations with HbA1c | `published_sources/build_figureS5.py` (restyle only; the values come from the UK Biobank analysis) | — |
 
 `render_heatmaps.py` redraws Figures 3, 4, S1 and S2 from the saved arrays in seconds, without

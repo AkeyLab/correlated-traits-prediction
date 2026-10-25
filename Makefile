@@ -13,7 +13,7 @@ help:
 	@echo "make figures      Every figure, in dependency order    (~1 hour)"
 	@echo "make heatmaps     Figures 3, 4, S1, S2 only            (~50 minutes)"
 	@echo "make replications Uncertainty estimates for Figure 2D-F (~40 minutes)"
-	@echo "make supplementary Supplementary Figures 3 and 4       (~3 minutes)"
+	@echo "make supplementary Supplementary Figures 3 and 4       (seconds)"
 	@echo "make restyle      Redraw Figures 3, 4, S1, S2 from arrays (seconds)"
 	@echo "make test         Bit-for-bit regression test          (~10 seconds)"
 	@echo "make verify       Compare output against reference/    (~1 second)"
@@ -28,7 +28,7 @@ heatmaps:
 	$(PYTHON) $(SCRIPTS)/figure3_figure4_heatmaps.py
 	$(PYTHON) $(SCRIPTS)/figureS1_figureS2_heatmaps.py
 
-# Supplementary Figures 3 and 4 (S3 needs the heatmap arrays; S4 simulates, ~3 minutes)
+# Supplementary Figures 3 and 4 (S3 needs the heatmap arrays; S4 draws reference/multi_helper/)
 supplementary:
 	$(PYTHON) $(SCRIPTS)/figureS_phenotypic_correlation.py
 	$(PYTHON) $(SCRIPTS)/figureS_multi_helper.py
